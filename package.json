@@ -1,0 +1,41 @@
+{
+  "name": "dbs_sose_16",
+  "version": "1.0.0",
+  "description": "DBS Projekt SoSe 16",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "migrations": "node ./backend/lib/run_migration.js run",
+    "list:migrations": "node ./backend/lib/run_migration.js list",
+    "help:migrations": "node ./backend/lib/run_migration.js help",
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/fearhat/dbs.git"
+  },
+  "dependencies": {
+    "args": "^1.3.0",
+    "code": "2.x.x",
+    "handlebars": "4.x.x",
+    "hapi": "11.x.x",
+    "inert": "3.x.x",
+    "joi": "7.x.x",
+    "lab": "7.x.x",
+    "lodash": "^4.13.1",
+    "lout": "7.x.x",
+    "moment": "^2.14.1",
+    "pg": "^6.0.1",
+    "vision": "4.x.x"
+  },
+  "keywords": [
+    "DBS",
+    "Projekt"
+  ],
+  "author": "Ferhat T, Kai R, Jeannine D, Sebastian L",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/fearhat/dbs/issues"
+  },
+  "homepage": "https://github.com/fearhat/dbs#readme"
+}
