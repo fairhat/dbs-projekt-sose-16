@@ -8,6 +8,8 @@
     "migrations": "node ./backend/lib/run_migration.js run",
     "list:migrations": "node ./backend/lib/run_migration.js list",
     "help:migrations": "node ./backend/lib/run_migration.js help",
+    "build:frontend": "webpack",
+    "dev": "webpack-dev-server",
     "test": "mocha"
   },
   "repository": {
@@ -37,5 +39,22 @@
   "bugs": {
     "url": "https://github.com/fearhat/dbs/issues"
   },
-  "homepage": "https://github.com/fearhat/dbs#readme"
+  "homepage": "https://github.com/fearhat/dbs#readme",
+  "devDependencies": {
+    "css-loader": "^0.23.1",
+    "html-webpack-plugin": "^2.22.0",
+    "mobx": "^2.3.5",
+    "mobx-react": "^3.4.0",
+    "mobx-react-devtools": "^4.2.0",
+    "react": "^15.2.1",
+    "react-dom": "^15.2.1",
+    "style-loader": "^0.13.1",
+    "stylus": "^0.54.5",
+    "stylus-loader": "^2.1.1",
+    "ts-loader": "^0.8.2",
+    "webpack": "^1.13.1",
+    "webpack-dev-server": "^1.14.1",
+    "webpack-merge": "^0.14.0",
+    "webpack-validator": "^2.2.2"
+  }
 }
