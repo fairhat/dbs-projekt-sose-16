@@ -1,1 +1,2 @@
-require('./backend/index.js');
+require('./backend/index.js')
+require('./frontend/server.js')

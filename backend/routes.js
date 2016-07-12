@@ -1,19 +1,33 @@
 const Joi = require('joi')
-const DB = require('./lib/database')
+
+const HundeController = require('./controllers/HundeController')
 
 module.exports = [
   {
     method: 'GET',
-    path: '/example',
+    path: '/hund/random',
     config: {
-      handler: (req, res) => {
-        res(`Hello ${req.query.name}`)
-      },
+      handler: HundeController.randomDogs,
       validate: {
         query: {
-          name: Joi.string()
+          amount: Joi.number().integer().min(1).max(200).required()
         }
-      },
-    }
+      }
+    },
   },
-];
+  {
+    method: 'GET',
+    path: '/hund/{id}',
+    config: {
+      handler: HundeController.findOne,
+      validate: {
+        params: {
+          id: Joi.number().integer()
+        }
+      }
+    },
+  }
+].map(route => {
+  route.path = `/v0${route.path}`
+  return route
+})

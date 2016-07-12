@@ -7,6 +7,7 @@ let config
 
 const PATHS = {
   app: path.join(__dirname, 'frontend'),
+  template: path.join(__dirname, 'frontend/templates/index.html'),
   dist: path.join(__dirname, 'dist'),
 }
 
@@ -21,19 +22,30 @@ const generalConfig = {
     plugins: [
       new HtmlWebpackPlugin({
         title: 'DBS Projekt SoSe 16',
+        template: PATHS.template,
       })
   ],
   resolve: {
-    extensions: ['', '.js', '.ts', '.tsx']
+    alias: {
+      'views': __dirname + '/frontend/views/',
+      'components': __dirname + '/frontend/components/',
+      'api': __dirname + '/frontend/lib/api',
+    },
+    extensions: ['', '.js', '.jsx', '.css']
   },
   module: {
     loaders: [
       {
-        test: /\.tsx?$/,
-        loaders: ['ts-loader'],
+        test: /\.jsx?$/,
+        loaders: ['babel?cacheDirectory'],
+        include: PATHS.app,
+      },
+      {
+        test: /\.js?$/,
+        loaders: ['babel?cacheDirectory'],
         include: PATHS.app,
       }
-    ]
+    ],
   }
 }
 
