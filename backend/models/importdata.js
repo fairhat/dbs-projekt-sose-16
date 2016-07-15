@@ -78,7 +78,7 @@ class ImportData {
 
       return {
         zwinger: zwinger.join(' '),
-        name
+        name: name.trim(),
       }
     }
 
@@ -90,14 +90,14 @@ class ImportData {
 
       return {
         zwinger,
-        name: name.join(' ')
+        name: name.join(' ').trim()
       }
     }
 
     // kein Zwinger vorhanden, Zwinger (NULL)
 
     return {
-      name: words.join(' '),
+      name: words.join(' ').trim(),
       zwinger: null
     }
   }

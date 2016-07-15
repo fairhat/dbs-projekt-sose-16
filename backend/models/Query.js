@@ -58,7 +58,7 @@ class Query {
   }
 
   offset(size = 0) {
-    this.QUERY += `OFFSET ${size}`
+    this.QUERY += `OFFSET ${size} `
 
     return this
   }
@@ -84,20 +84,29 @@ class Query {
   }
 
   paginate(page, itemsPerpage) {
-    this.offset(page * itemsPerpage)
-    this.limit(itemsPerpage)
+    if (typeof page !== 'undefined' && itemsPerpage) {
+      this.offset(page * itemsPerpage)
+      this.limit(itemsPerpage)
+    }
 
     return this
   }
 
   print() {
-    console.log(this.QUERY || 'Empty')
+    console.log(`DBQuery :: "${this.QUERY}"`)
+    return this
+  }
+
+  query(queryString) {
+    this.QUERY += queryString
+
     return this
   }
 
   done(query = this.QUERY) {
     const qry = query + ';'
-    console.log(qry)
+
+    this.print()
 
     return new Promise((resolve, reject) => {
       DB.query(qry, (err, rows) => {
@@ -115,7 +124,7 @@ class Query {
   }
 
   static q(queryString) {
-    return (new Query()).done(queryString)
+    return (new Query()).query(queryString).done()
   }
 }
 

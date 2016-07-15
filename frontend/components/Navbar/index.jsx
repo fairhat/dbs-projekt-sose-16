@@ -13,7 +13,8 @@ export default class Navigation extends React.Component {
             </Navbar.Header>
             <Nav>
               <NavItem eventKey={1} href="#/">Home</NavItem>
-              <NavItem eventKey={2} href="#/predictions/">Predictions</NavItem>
+              <NavItem eventKey={2} href="#/random/">Random</NavItem>
+              <NavItem eventKey={3} href="#/race/">Virtuelles Hunderennen</NavItem>
             </Nav>
           </Navbar>
         )

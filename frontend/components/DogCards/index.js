@@ -9,19 +9,9 @@ export default class DogCards extends React.Component {
   }
 
   state = {
-    top: -100,
+    top: 200,
     opacity: 0,
     direction: 0,
-  }
-
-  componentWillReceiveProps(nextProps) {
-    if (nextProps.hunde !== this.props.hunde) {
-      this.setState({ direction: -100 })
-
-      setTimeout(() => {
-        this.setState({ direction: 0 })
-      })
-    }
   }
 
   getStyles(prevStyles) {
@@ -40,25 +30,18 @@ export default class DogCards extends React.Component {
     const nextStyles = (prevStyles) => {
       return prevStyles.map((prev, i) => {
         if (i === 0) {
-          if (this.state.direction === 0) {
             return { top: spring(0), opacity: spring(1, presets.stiff) }
-          } else {
-            return { top: spring(-100), opacity: spring(0, presets.stiff) }
-          }
         } else {
           const lastCard = prevStyles[i - 1].top
           const Card = prevStyles[i]
           // const direction =
-          if (this.state.direction === 0) {
-            return lastCard >= -50 ? { top: spring(0, presets.wobbly), opacity: spring(1, presets.stiff) } : Card
-          }
-          return lastCard <= -50 ? { top: spring(-100, presets.wobbly), opacity: spring(0, presets.stiff) } : Card
+          return lastCard <= 50 ? { top: spring(0, presets.wobbly), opacity: spring(1, presets.stiff) } : Card
         }
       })
     }
     return (
       <StaggeredMotion
-        defaultStyles={range(this.props.amount).map(() => ({ top: -100, opacity: 0 }))}
+        defaultStyles={range(this.props.amount).map(() => ({ top: 200, opacity: 0 }))}
         styles={nextStyles}>
         {
           hundeTransition => {

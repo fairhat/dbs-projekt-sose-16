@@ -7,7 +7,9 @@ export default class DogCard extends React.Component {
 
   state = {
     labels: [],
-    placements: []
+    placements: [],
+    width: 300,
+    className: 'DogCard' + Math.floor(Math.random() * 100),
   }
 
   componentWillReceiveProps(nextProps) {
@@ -19,7 +21,6 @@ export default class DogCard extends React.Component {
         e.year = year
         return e
       })
-      console.log(ergebnisWithYears.filter(e => !e.year))
       const sortedRuns = ergebnisWithYears.sort((a, b) => {
         if (a.year > b.year) return 1
         if (a.year < b.year) return -1
@@ -45,9 +46,9 @@ export default class DogCard extends React.Component {
       )
     }
     const dog = this.props
-    const vater = dog.vater ? dog.vater.name : 'Unbekannt'
-    const mutter = dog.mutter ? dog.mutter.name : 'Unbekannt'
-    const zwinger = dog.zwinger ? dog.zwinger.name : 'Unbekannt'
+    const vater = dog.vater ? dog.vater.name : '-'
+    const mutter = dog.mutter ? dog.mutter.name : '-'
+    const zwinger = dog.zwinger ? dog.zwinger.name : '-'
     const showChart = this.props.showChart
 
     const dataSets = [
@@ -61,40 +62,42 @@ export default class DogCard extends React.Component {
 
     return (
       <div style={this.props.style}>
-        <Col md={4}>
-          <Panel header={`Name: ${this.props.name}`} bsStyle="info">
+        <Col md={3}>
+          <Panel header={`Name - ${this.props.name}`} bsStyle="danger">
             <hr />
             <h4>Daten</h4>
             <Row>
-              <Col md={6}>ID</Col><Col md={6}>{dog.hid}</Col>
-              <Col md={6}>Aufenthalt</Col><Col md={6}>{dog.aufenthaltsland}</Col>
-              <Col md={6}>Geburtsland</Col><Col md={6}>{dog.geburtsland}</Col>
-              <Col md={6}>Alter</Col><Col md={6}>{dog.geburtsjahr}</Col>
-              <Col md={6}>Vater</Col><Col md={6}>{vater}</Col>
-              <Col md={6}>Mutter</Col><Col md={6}>{mutter}</Col>
-              <Col md={6}>Zwinger</Col><Col md={6}>{zwinger}</Col>
+              <Col md={4} xs={6}>ID</Col><Col md={8} xs={6}>{dog.hid}</Col>
+              <Col md={4} xs={6}>Aufenthalt</Col><Col md={8} xs={6}>{dog.aufenthaltsland || '-'}</Col>
+              <Col md={4} xs={6}>Geburtsland</Col><Col md={8} xs={6}>{dog.geburtsland || '-'}</Col>
+              <Col md={4} xs={6}>Alter</Col><Col md={8} xs={6}>{dog.geburtsjahr}</Col>
+              <Col md={4} xs={6}>Vater</Col><Col md={8} xs={6}>{vater}</Col>
+              <Col md={4} xs={6}>Mutter</Col><Col md={8} xs={6}>{mutter}</Col>
+              <Col md={4} xs={6}>Zwinger</Col><Col md={8} xs={6}>{zwinger}</Col>
             </Row>
             <hr />
-            <h4>Platzierungen (mit Prognose)</h4>
+            <h4>Jahresplatzierungen</h4>
             {
               showChart && (
-                <Line
-                  width="300"
-                  data={{
-                    labels: this.state.labels,
-                    datasets: dataSets
-                  }}
-                  options={{
-                    scales: {
-                        xAxes: [{
-                            type: 'linear',
-                            position: 'bottom'
-                        }]
-                    }
-                  }} />
+                <div style={{ minHeight: 120 }} ref="panel">
+                  <Line
+                    data={{
+                      labels: this.state.labels,
+                      datasets: dataSets
+                    }}
+                    options={{
+                      responsive: true,
+                      scales: {
+                          xAxes: [{
+                              type: 'linear',
+                              position: 'bottom'
+                          }]
+                      }
+                    }} />
+                </div>
               )
             }
-            { !showChart && 'Wird geladen...'}
+            { !showChart && <div style={{ minHeight: 120 }}>Wird geladen...</div>}
             <hr />
           </Panel>
         </Col>

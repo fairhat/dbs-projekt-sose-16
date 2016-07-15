@@ -49,16 +49,16 @@ class DBModel {
     fieldName = '',
     condition = '',
     fields = '*',
-    sortBy = {}
+    sortBy = {},
+    { page, itemsPerPage } = {}
     ) {
-      if (condition.length > 0) {
-        return (new Query())
-          .select(fields)
-          .from(this.tableName)
-          .where(`${fieldName} ${condition}`)
-          .orderBy(sortBy)
-          .done()
-      } else return Promise.resolve('empty')
+      return (new Query())
+        .select(fields)
+        .from(this.tableName)
+        .where(`${fieldName} ${condition}`)
+        .orderBy(sortBy)
+        .paginate(page, itemsPerPage)
+        .done()
   }
 
   static query(queryString) {
