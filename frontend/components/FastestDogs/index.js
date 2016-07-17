@@ -47,7 +47,7 @@ export default class FastestDogs extends React.Component {
           <Table striped bordered condensed hover>
             <thead>
               <tr>
-                <th>Beste Punktzahl</th>
+                <th>Punkte</th>
                 <th>Hund</th>
               </tr>
             </thead>

@@ -54,8 +54,8 @@ export default class Predictions extends React.Component {
           </FormGroup>
         </Row>
         <Row className="Cards">
-          <DogCards hunde={hunde} amount={this.state.amount} />
-          { isLoading &&   <ProgressBar className="animated fadeInDown" active now={100} label="wird geladen..." />}
+          { !isLoading && <DogCards hunde={hunde} amount={this.state.amount} /> }
+          { isLoading &&   <ProgressBar className="animated bounceIn" active now={100} label="wird geladen..." />}
         </Row>
       </Grid>
     )

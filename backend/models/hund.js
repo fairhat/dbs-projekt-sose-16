@@ -89,7 +89,11 @@ class Hund extends DBModel {
   }
 
   static getRandom(amount, maxAge) {
-    return Hund.query(`SELECT * FROM ${this.tableName} WHERE geburtsjahr >= ${maxAge} ORDER BY RANDOM() LIMIT ${amount}`)
+    return Hund.query(`
+        SELECT * FROM ${this.tableName}
+        WHERE geburtsjahr >= ${maxAge} AND (SELECT COUNT(*) FROM ergebnisse WHERE ergebnisse.hund = hid) > 4
+        ORDER BY RANDOM()
+        LIMIT ${amount};`)
       .then((dogs) => {
         const DogInstances = dogs.map(d => new Hund(d))
 

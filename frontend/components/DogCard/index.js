@@ -76,29 +76,6 @@ export default class DogCard extends React.Component {
               <Col md={4} xs={6}>Zwinger</Col><Col md={8} xs={6}>{zwinger}</Col>
             </Row>
             <hr />
-            <h4>Jahresplatzierungen</h4>
-            {
-              showChart && (
-                <div style={{ minHeight: 120 }} ref="panel">
-                  <Line
-                    data={{
-                      labels: this.state.labels,
-                      datasets: dataSets
-                    }}
-                    options={{
-                      responsive: true,
-                      scales: {
-                          xAxes: [{
-                              type: 'linear',
-                              position: 'bottom'
-                          }]
-                      }
-                    }} />
-                </div>
-              )
-            }
-            { !showChart && <div style={{ minHeight: 120 }}>Wird geladen...</div>}
-            <hr />
           </Panel>
         </Col>
       </div>
