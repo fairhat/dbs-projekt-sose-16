@@ -4,6 +4,9 @@ Tutor: Ha
 
 ### Installation
 
+Repo: https://github.com/fearhat/dbs-projekt-sose-16
+Dokumentation: https://fearhat.gitbooks.io/dbs-sose-16-dokumentation/content/
+
 1. NodeJS installieren (https://nodejs.org/en/) (Unter Windows nicht vergessen, in den PATH einzutragen (! npm und node))  
 Checkt bitte die Installation nochmal mit ``$ node -v``
 2. ``$ npm install`` zum installieren benötigter libraries (erfordert internetverbindung)
