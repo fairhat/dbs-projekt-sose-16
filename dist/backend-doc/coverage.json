@@ -1,0 +1,123 @@
+{
+  "coverage": "46.15%",
+  "expectCount": 104,
+  "actualCount": 48,
+  "files": {
+    "backend/models/DBModel.js": {
+      "expectCount": 10,
+      "actualCount": 8,
+      "undocumentLines": [
+        9,
+        110
+      ]
+    },
+    "backend/models/Hund.js": {
+      "expectCount": 12,
+      "actualCount": 8,
+      "undocumentLines": [
+        11,
+        179,
+        175,
+        171
+      ]
+    },
+    "backend/controllers/HundeController.js": {
+      "expectCount": 7,
+      "actualCount": 1,
+      "undocumentLines": [
+        40,
+        48,
+        88,
+        14,
+        68,
+        26
+      ]
+    },
+    "backend/models/importdata.js": {
+      "expectCount": 25,
+      "actualCount": 1,
+      "undocumentLines": [
+        44,
+        42,
+        11,
+        36,
+        43,
+        37,
+        67,
+        32,
+        39,
+        52,
+        46,
+        33,
+        47,
+        48,
+        35,
+        40,
+        41,
+        56,
+        38,
+        51,
+        53,
+        34,
+        45,
+        50
+      ]
+    },
+    "backend/models/Query.js": {
+      "expectCount": 17,
+      "actualCount": 11,
+      "undocumentLines": [
+        7,
+        4,
+        6,
+        11,
+        10,
+        9
+      ]
+    },
+    "backend/models/Rennen.js": {
+      "expectCount": 5,
+      "actualCount": 1,
+      "undocumentLines": [
+        9,
+        25,
+        21,
+        17
+      ]
+    },
+    "backend/models/Zwinger.js": {
+      "expectCount": 5,
+      "actualCount": 1,
+      "undocumentLines": [
+        9,
+        24,
+        20,
+        16
+      ]
+    },
+    "backend/controllers/ZwingerController.js": {
+      "expectCount": 3,
+      "actualCount": 1,
+      "undocumentLines": [
+        14,
+        10
+      ]
+    },
+    "backend/migrations/01_create_tables.js": {
+      "expectCount": 4,
+      "actualCount": 2,
+      "undocumentLines": [
+        38,
+        39
+      ]
+    },
+    "backend/migrations/02_import_csv.js": {
+      "expectCount": 16,
+      "actualCount": 14,
+      "undocumentLines": [
+        341,
+        342
+      ]
+    }
+  }
+}

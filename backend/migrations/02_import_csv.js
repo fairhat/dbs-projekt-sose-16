@@ -11,6 +11,9 @@ const UNIQUEDOGS    = createUniqueDogs(DOGS)
 const ZWINGER       = createImportZwinger(UNIQUEDOGS)
 const RACES         = createRaces(DOGS)
 
+/**
+ * @desc importiert die Hunde in die Datenbank
+ */
 function importDogs() {
     return new Promise((resolve, reject) => {
         let counter = 1
@@ -40,6 +43,9 @@ function importDogs() {
     })
 }
 
+/**
+ * @desc updated vater/mutter der hunde in die db
+ */
 function updateMomDad() {
     return new Promise((resolve, reject) => {
         const DogDad = UNIQUEDOGS.map(({ id, vaterID }) => `WHEN ${id} THEN ${vaterID}`).join('\n                    ')
@@ -71,6 +77,9 @@ function updateMomDad() {
     })
 }
 
+/**
+ * @desc fügt zwinger in die db
+ */
 function insertZwinger() {
     return new Promise((resolve, reject) => {
         let counter = 1
@@ -102,6 +111,9 @@ function insertZwinger() {
     })
 }
 
+/**
+ * @desc setzt beziehung hunde -> zwinger
+ */
 function updateHundeZwinger() {
     return new Promise((resolve, reject) => {
         const DogZwinger = UNIQUEDOGS.map(({ id, zwingerID }) => `WHEN ${id} THEN ${zwingerID}`).join('\n                    ')
@@ -127,6 +139,9 @@ function updateHundeZwinger() {
     })
 }
 
+/**
+ * @desc fügt ergebnisse hinzu
+ */
 function insertResults() {
     return new Promise((resolve, reject) => {
         let counter = 1
@@ -180,6 +195,9 @@ function insertResults() {
     })
 }
 
+/**
+ * @desc fügt rennen hinzu
+ */
 function insertRaces() {
     return new Promise((resolve, reject) => {
         let counter = 1
@@ -215,6 +233,9 @@ function insertRaces() {
     })
 }
 
+/**
+ * @desc löscht alle tabellen
+ */
 function dropTables () {
     return new Promise((resolve, reject) => {
         DB.query(`
@@ -233,6 +254,9 @@ function dropTables () {
     })
 }
 
+/**
+ * @desc füllt die hundedaten in-memory
+ */
 function fillInitialDogData() {
     console.log('Bereite CSV Datei für import vor')
     UNIQUEDOGS.forEach((dog) => {
@@ -256,6 +280,10 @@ function fillInitialDogData() {
     return Promise.resolve()
 }
 
+/**
+ * @param {Array} Args
+ * @desc main funktion
+ */
 function main(args) {
     return fillInitialDogData()
         .then(dropTables)
@@ -269,20 +297,32 @@ function main(args) {
         .catch((err) => console.error(err))
 }
 
+/**
+ * @desc Read CSV Datei
+ */
 function readCSV() {
     return fs.readFileSync(__dirname + './../data/greyhounddata.csv', 'utf8')
              .split('\n')
              .map(x => x.split(';'))
 }
 
+/**
+ * @desc Erstellt Hunde Instanzen
+ */
 function createDogs(csvfile) {
     return CSV.map((row, index) => new ImportData(index + 1, row))
 }
 
+/**
+ * @desc findet alle unique hunde
+ */
 function createUniqueDogs(dogs) {
     return _.uniqBy(dogs, 'name')
 }
 
+/**
+ * @desc erstellt zwinger Instanzen
+ */
 function createImportZwinger(uniqDogs) {
     return _.uniqBy(uniqDogs, 'zwinger')
             .map((z) => z.zwinger)
@@ -290,6 +330,9 @@ function createImportZwinger(uniqDogs) {
             .map((name, id) => new ImportZwinger({ name, id: id + 1 }))
 }
 
+/**
+ * @desc erstellt rennen
+ */
 function createRaces(dogs) {
     return (_.uniqBy(dogs, 'raceYearCountry')).map(({ raceYear, raceCountry }, index) => ({ year: raceYear, country: raceCountry, id: index + 1 }))
 }

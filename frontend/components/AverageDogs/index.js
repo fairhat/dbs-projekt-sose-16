@@ -2,23 +2,27 @@ import React from 'react'
 import Api from 'api'
 import { Col, Panel, Table } from 'react-bootstrap'
 
+/**
+ * @name AverageDogs
+ * @class
+ * @desc Calculates average dogs
+ */
 export default class AverageDogs extends React.Component {
-  static propTypes = {
-    direction: React.PropTypes.oneOf(['fastest', 'slowest']),
-    top: React.PropTypes.number,
+
+  constructor(props) {
+    super(props)
+    this.getHunde = this.getHunde.bind(this)
+
+    this.state = {
+      isLoading: false,
+      dogs: []
+    }
   }
 
-  static defaultProps = {
-    direction: 'fastest',
-    top: 15
-  }
-
-  state = {
-    isLoading: false,
-    dogs: []
-  }
-
-  getHunde = () => {
+  /**
+   * @desc fetch dogs from api
+   */
+  getHunde() {
     this.setState({ isLoading: true })
     const direction = this.props.direction === 'fastest' ? -1 : 1
     Api.get('/hund/average', {
@@ -33,6 +37,9 @@ export default class AverageDogs extends React.Component {
     })
   }
 
+  /**
+   * @desc fetch dogs on mount
+   */
   componentDidMount() {
     this.getHunde()
   }
@@ -68,4 +75,14 @@ export default class AverageDogs extends React.Component {
       </Col>
     )
   }
+}
+
+AverageDogs.propTypes = {
+  direction: React.PropTypes.oneOf(['fastest', 'slowest']),
+  top: React.PropTypes.number,
+}
+
+AverageDogs.defaultProps = {
+  direction: 'fastest',
+  top: 15
 }

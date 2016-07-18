@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width">
+	<title>Dograce DBS SoSe 16 Source: migrations/02_import_csv.js</title>
+
+	<!--[if lt IE 9]>
+	<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+	<link type="text/css" rel="stylesheet" href="styles/sunlight.default.css">
+
+	<link type="text/css" rel="stylesheet" href="styles/site.cosmo.css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top navbar-inverse">
+<div class="container">
+	<div class="navbar-header">
+		<a class="navbar-brand" href="index.html">Dograce DBS SoSe 16</a>
+		<button class="navbar-toggle" type="button" data-toggle="collapse" data-target="#topNavigation">
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+        </button>
+	</div>
+	<div class="navbar-collapse collapse" id="topNavigation">
+		<ul class="nav navbar-nav">
+			
+			<li class="dropdown">
+				<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b class="caret"></b></a>
+				<ul class="dropdown-menu ">
+					<li><a href="DBModel.html">DBModel</a></li><li><a href="Ergebnis.html">Ergebnis</a></li><li><a href="Hund.html">Hund</a></li><li><a href="HundeController.html">HundeController</a></li><li><a href="ImportZwinger.html">ImportZwinger</a></li><li><a href="Zwinger.html">Zwinger</a></li><li><a href="ZwingerController.html">ZwingerController</a></li>
+				</ul>
+			</li>
+			
+			<li class="dropdown">
+				<a href="global.html" class="dropdown-toggle" data-toggle="dropdown">Global<b class="caret"></b></a>
+				<ul class="dropdown-menu ">
+					<li><a href="global.html#all">all</a></li><li><a href="global.html#avg">avg</a></li><li><a href="global.html#children">children</a></li><li><a href="global.html#createDogs">createDogs</a></li><li><a href="global.html#createImportZwinger">createImportZwinger</a></li><li><a href="global.html#createRaces">createRaces</a></li><li><a href="global.html#createTables">createTables</a></li><li><a href="global.html#createUniqueDogs">createUniqueDogs</a></li><li><a href="global.html#dropTables">dropTables</a></li><li><a href="global.html#fillInitialDogData">fillInitialDogData</a></li><li><a href="global.html#findOne">findOne</a></li><li><a href="global.html#from">from</a></li><li><a href="global.html#importDogs">importDogs</a></li><li><a href="global.html#index">index</a></li><li><a href="global.html#insertRaces">insertRaces</a></li><li><a href="global.html#insertResults">insertResults</a></li><li><a href="global.html#insertZwinger">insertZwinger</a></li><li><a href="global.html#main">main</a></li><li><a href="global.html#Query">Query</a></li><li><a href="global.html#races">races</a></li><li><a href="global.html#randomDogs">randomDogs</a></li><li><a href="global.html#readCSV">readCSV</a></li><li><a href="global.html#Rennen">Rennen</a></li><li><a href="global.html#select">select</a></li><li><a href="global.html#updateHundeZwinger">updateHundeZwinger</a></li><li><a href="global.html#updateMomDad">updateMomDad</a></li><li><a href="global.html#where">where</a></li>
+				</ul>
+			</li>
+			
+		</ul>
+		<div class="col-sm-3 col-md-3">
+            <form class="navbar-form" role="search">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Search" name="q" id="search-input">
+                    <div class="input-group-btn">
+                        <button class="btn btn-default" id="search-submit"><i class="glyphicon glyphicon-search"></i></button>
+                    </div>
+                </div>
+            </form>
+        </div>
+	</div>
+
+</div>
+</div>
+
+
+<div class="container" id="toc-content">
+<div class="row">
+
+	
+	<div class="col-md-12">
+	
+		<div id="main">
+			
+
+		<h1 class="page-title">Source: migrations/02_import_csv.js</h1>
+    
+<section>
+    <article>
+        <pre
+            class="sunlight-highlight-javascript linenums">'use strict'
+
+const DB            = require('./../lib/database')
+const fs            = require('fs')
+const _             = require('lodash')
+const ImportData    = require('./../models/importdata.js')
+const ImportZwinger = ImportData.ImportZwinger
+const CSV           = readCSV()
+const DOGS          = createDogs(CSV)
+const UNIQUEDOGS    = createUniqueDogs(DOGS)
+const ZWINGER       = createImportZwinger(UNIQUEDOGS)
+const RACES         = createRaces(DOGS)
+
+/**
+ * @desc importiert die Hunde in die Datenbank
+ */
+function importDogs() {
+    return new Promise((resolve, reject) => {
+        let counter = 1
+        const insertVars = UNIQUEDOGS.map((dog) => dog.transformToSQLInsert())
+
+        const queryVars = insertVars.map((v, i) => `(${v.map(k => {
+            const count = counter
+            counter = counter + 1
+            return `$${count}`
+        }).join(',')})`).join(',')
+
+        const QUERY = `
+        INSERT INTO hunde
+            (hid, name, geschlecht, geburtsjahr, geburtsland, aufenthaltsland)
+        VALUES ${queryVars};
+        `
+
+        DB.query(QUERY, _.flatten(insertVars), (err) => {
+            if (err) {
+                reject(err)
+            }
+            else {
+                resolve('Hunde importiert')
+                console.log('Hunde importiert')
+            }
+        })
+    })
+}
+
+/**
+ * @desc updated vater/mutter der hunde in die db
+ */
+function updateMomDad() {
+    return new Promise((resolve, reject) => {
+        const DogDad = UNIQUEDOGS.map(({ id, vaterID }) => `WHEN ${id} THEN ${vaterID}`).join('\n                    ')
+        const DogMom = UNIQUEDOGS.map(({ id, mutterID }) => `WHEN ${id} THEN ${mutterID}`).join('\n                    ')
+
+        const UpdateMomDad = `
+            UPDATE hunde
+            SET vater = CASE hid
+                        ${DogDad}
+                        ELSE null
+                        END;
+            UPDATE hunde
+            SET mutter = CASE hid
+                        ${DogMom}
+                        ELSE null
+                        END
+        `
+        // fs.writeFileSync('./momDad.sql', UpdateMomDad, 'utf8')
+
+        DB.query(UpdateMomDad, (err) => {
+            if (err) {
+                reject(err)
+            }
+            else {
+                resolve('Eltern aktualisiert')
+                console.log('Eltern aktualisiert')
+            }
+        })
+    })
+}
+
+/**
+ * @desc fügt zwinger in die db
+ */
+function insertZwinger() {
+    return new Promise((resolve, reject) => {
+        let counter = 1
+
+        const zwingerInserts = ZWINGER.map(({ id, name }) => ([id, name]))
+        const zwingerVars = zwingerInserts.map(() => {
+            const id = counter
+            counter = counter + 1
+            const name = counter
+            counter = counter + 1
+
+            return `($${id}, $${name})`
+        }).join(',')
+        const QUERY = `
+        INSERT INTO zwinger
+            (zid, name)
+        VALUES ${zwingerVars};
+        `
+
+        DB.query(QUERY, _.flatten(zwingerInserts), (err) => {
+            if (err) {
+                reject(err)
+            }
+            else {
+                resolve('Zwinger importiert')
+                console.log('Zwinger importiert')
+            }
+        })
+    })
+}
+
+/**
+ * @desc setzt beziehung hunde -> zwinger
+ */
+function updateHundeZwinger() {
+    return new Promise((resolve, reject) => {
+        const DogZwinger = UNIQUEDOGS.map(({ id, zwingerID }) => `WHEN ${id} THEN ${zwingerID}`).join('\n                    ')
+
+        const UpdateZwinger = `
+            UPDATE hunde
+            SET zwinger = CASE hid
+                        ${DogZwinger}
+                        ELSE null
+                        END;
+        `
+        // fs.writeFileSync('./momDad.sql', UpdateZwinger, 'utf8')
+
+        DB.query(UpdateZwinger, (err) => {
+            if (err) {
+                reject(err)
+            }
+            else {
+                resolve('Hunde -> Zwinger aktualisiert')
+                console.log('Hunde -> Zwinger aktualisiert')
+            }
+        })
+    })
+}
+
+/**
+ * @desc fügt ergebnisse hinzu
+ */
+function insertResults() {
+    return new Promise((resolve, reject) => {
+        let counter = 1
+
+        const inserts = DOGS.map((({
+            id,
+            avgDistance,
+            name,
+            rang,
+            sumPoints,
+            raceCountry,
+            raceYear,
+            runCount,
+        }) => {
+            const dog = UNIQUEDOGS.find(d => d.name === name)
+            const race = RACES.find(({ year, country }) => year === raceYear &amp;&amp; country === raceCountry)
+            return [
+                id,
+                avgDistance,
+                rang,
+                dog.id,
+                race.id,
+                sumPoints,
+                runCount
+            ]
+        }))
+
+        const vars = inserts.map((x) => {
+            // ES6 Magic, Array Comprehension -> [Array from 1 to length of x]
+            const vars = x.map((y) => {
+                const count = counter
+                counter += 1
+                return '$' + count
+            })
+            return `(${vars.join(', ')})`
+        }).join(',')
+
+        const QUERY = `
+        INSERT INTO ergebnisse
+            (eid, distanz, rang, hund, rennen, punkte, laeufe)
+        VALUES ${vars}
+        `
+
+        DB.query(QUERY, _.flatten(inserts), (err) => {
+            if (err) reject(err)
+            else {
+                resolve('Ergebnisse importiert')
+                console.log('Ergebnisse importiert')
+            }
+        })
+    })
+}
+
+/**
+ * @desc fügt rennen hinzu
+ */
+function insertRaces() {
+    return new Promise((resolve, reject) => {
+        let counter = 1
+
+        const raceInserts = RACES.map((({ id, year, country }) => ([id, year, country])))
+
+        const raceVars = raceInserts.map((z) => {
+            const id = counter
+            counter = counter + 1
+            const year = counter
+            counter = counter + 1
+            const country = counter
+            counter = counter + 1
+
+            return `($${id}, $${year}, $${country})`
+        }).join(',')
+
+        const QUERY = `
+        INSERT INTO rennen
+            (rid, jahr, ort)
+        VALUES ${raceVars};
+        `
+
+        DB.query(QUERY, _.flatten(raceInserts), (err) => {
+            if (err) {
+                reject(err)
+            }
+            else {
+                resolve('Rennen importiert')
+                console.log('Rennen importiert')
+            }
+        })
+    })
+}
+
+/**
+ * @desc löscht alle tabellen
+ */
+function dropTables () {
+    return new Promise((resolve, reject) => {
+        DB.query(`
+            DELETE FROM ergebnisse;
+            DELETE FROM hunde;
+            DELETE FROM zwinger;
+            DELETE FROM rennen;
+        `, (err) => {
+            if (err) {
+                reject(err)
+            } else {
+                resolve('Tabellen geleert')
+                console.log('Tabellen geleert')
+            }
+        })
+    })
+}
+
+/**
+ * @desc füllt die hundedaten in-memory
+ */
+function fillInitialDogData() {
+    console.log('Bereite CSV Datei für import vor')
+    UNIQUEDOGS.forEach((dog) => {
+        UNIQUEDOGS.forEach(({id, name}) => {
+            // finde vater und mutter eines hundes
+            if (name === dog.mutter) {
+                dog.mutterID = id
+                return;
+            }
+
+            if (name === dog.vater) {
+                dog.vaterID = id
+                return;
+            }
+        })
+
+        const myZwinger = ZWINGER.find(zw => zw.name === dog.zwinger)
+        dog.zwingerID = myZwinger ? myZwinger.id : null
+    })
+
+    return Promise.resolve()
+}
+
+/**
+ * @param {Array} Args
+ * @desc main funktion
+ */
+function main(args) {
+    return fillInitialDogData()
+        .then(dropTables)
+        .then(importDogs)
+        .then(updateMomDad)
+        .then(insertZwinger)
+        .then(updateHundeZwinger)
+        .then(insertRaces)
+        .then(insertResults)
+        .then(() => console.log('Fertig! Alle Daten wurden von der CSV importiert.'))
+        .catch((err) => console.error(err))
+}
+
+/**
+ * @desc Read CSV Datei
+ */
+function readCSV() {
+    return fs.readFileSync(__dirname + './../data/greyhounddata.csv', 'utf8')
+             .split('\n')
+             .map(x => x.split(';'))
+}
+
+/**
+ * @desc Erstellt Hunde Instanzen
+ */
+function createDogs(csvfile) {
+    return CSV.map((row, index) => new ImportData(index + 1, row))
+}
+
+/**
+ * @desc findet alle unique hunde
+ */
+function createUniqueDogs(dogs) {
+    return _.uniqBy(dogs, 'name')
+}
+
+/**
+ * @desc erstellt zwinger Instanzen
+ */
+function createImportZwinger(uniqDogs) {
+    return _.uniqBy(uniqDogs, 'zwinger')
+            .map((z) => z.zwinger)
+            .filter((z) => z &amp;&amp; z.length > 0)
+            .map((name, id) => new ImportZwinger({ name, id: id + 1 }))
+}
+
+/**
+ * @desc erstellt rennen
+ */
+function createRaces(dogs) {
+    return (_.uniqBy(dogs, 'raceYearCountry')).map(({ raceYear, raceCountry }, index) => ({ year: raceYear, country: raceCountry, id: index + 1 }))
+}
+
+module.exports = main
+module.exports.cmd = 'csv'
+module.exports.description = `Liest die greyhounddata.csv
+ein und importiert die Daten
+in das relationale Datenbankschema
+Befehl: npm run migrations -- -n=csv`
+</pre>
+    </article>
+</section>
+
+
+
+
+
+		</div>
+	</div>
+
+	<div class="clearfix"></div>
+
+	
+
+</div>
+</div>
+
+<div class="modal fade" id="searchResults">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Search results</h4>
+      </div>
+      <div class="modal-body"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div>
+
+<footer>
+
+
+	<span class="copyright">
+	Kai R, Ferhat T, Jeannine D, Sebastian L
+	</span>
+
+<span class="jsdoc-message">
+	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a>
+	
+		on Mon Jul 18th 2016
+	
+	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
+</span>
+</footer>
+
+<script src="scripts/docstrap.lib.js"></script>
+<script src="scripts/toc.js"></script>
+<script type="text/javascript" src="scripts/fulltext-search-ui.js"></script>
+
+<script>
+$( function () {
+	$( "[id*='$']" ).each( function () {
+		var $this = $( this );
+
+		$this.attr( "id", $this.attr( "id" ).replace( "$", "__" ) );
+	} );
+
+	$( ".tutorial-section pre, .readme-section pre" ).each( function () {
+		var $this = $( this );
+
+		var example = $this.find( "code" );
+		exampleText = example.html();
+		var lang = /{@lang (.*?)}/.exec( exampleText );
+		if ( lang && lang[1] ) {
+			exampleText = exampleText.replace( lang[0], "" );
+			example.html( exampleText );
+			lang = lang[1];
+		} else {
+			var langClassMatch = example.parent()[0].className.match(/lang\-(\S+)/);
+			lang = langClassMatch ? langClassMatch[1] : "javascript";
+		}
+
+		if ( lang ) {
+
+			$this
+			.addClass( "sunlight-highlight-" + lang )
+			.addClass( "linenums" )
+			.html( example.html() );
+
+		}
+	} );
+
+	Sunlight.highlightAll( {
+		lineNumbers : true,
+		showMenu : true,
+		enableDoclinks : true
+	} );
+
+	$.catchAnchorLinks( {
+        navbarOffset: 10
+	} );
+	$( "#toc" ).toc( {
+		anchorName  : function ( i, heading, prefix ) {
+			var id = $( heading ).attr( "id" );
+			return id && id.replace(/\~/g, '-inner-').replace(/\./g, '-static-') || ( prefix + i );
+		},
+		selectors   : "#toc-content h1,#toc-content h2,#toc-content h3,#toc-content h4",
+		showAndHide : false,
+		smoothScrolling: true
+	} );
+
+	$( "#main span[id^='toc']" ).addClass( "toc-shim" );
+	$( '.dropdown-toggle' ).dropdown();
+
+    $( "table" ).each( function () {
+      var $this = $( this );
+      $this.addClass('table');
+    } );
+
+} );
+</script>
+
+
+
+<!--Navigation and Symbol Display-->
+
+
+<!--Google Analytics-->
+
+
+<script type="text/javascript">
+	$(document).ready(function() {
+		SearcherDisplay.init();
+	});
+</script>
+
+</body>
+</html>

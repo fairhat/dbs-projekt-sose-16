@@ -10,31 +10,41 @@ const interpolate = require('interpolating-polynomial')
 
 export default class DogRace extends React.Component {
 
-  state = {
-    isLoading: false,
-    amount: 10,
-    labels: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'],
-    data: [
-      12, 9, 7, 8, 5, 4, 6, 2, 3, 3, 4, 6,
-      4,  5, 3, 7, 3, 5, 5, 3, 4, 4, 5, 5,
-      5,  3, 4, 5, 6, 3, 3, 4, 5, 6, 3, 4,
-      3,  4, 5, 6, 7, 6, 4, 5, 6, 7, 6, 3
-    ],
-    delays: 80,
-    duration: 500,
-    hunde: [],
-    races: [],
-    render: 0,
-    calculatedSixteen: false,
-    calculatedSeventeen: false,
-    year: 2016,
+  constructor(props) {
+    super(props)
+
+    this.state = {
+      isLoading: false,
+      amount: 10,
+      labels: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'],
+      data: [
+        12, 9, 7, 8, 5, 4, 6, 2, 3, 3, 4, 6,
+        4,  5, 3, 7, 3, 5, 5, 3, 4, 4, 5, 5,
+        5,  3, 4, 5, 6, 3, 3, 4, 5, 6, 3, 4,
+        3,  4, 5, 6, 7, 6, 4, 5, 6, 7, 6, 3
+      ],
+      delays: 80,
+      duration: 500,
+      hunde: [],
+      races: [],
+      render: 0,
+      calculatedSixteen: false,
+      calculatedSeventeen: false,
+      year: 2016,
+    }
+
+    this.getHunde = this.getHunde.bind(this)
+    this.startRace = this.startRace.bind(this)
+    this.calculateDogRankings = this.calculateDogRankings.bind(this)
+    this.getYear = this.getYear.bind(this)
+    this.renderChart = this.renderChart.bind(this)
   }
 
   componentWillMount() {
     this.getHunde(this.state.amount)
   }
 
-  getHunde = (amount = this.state.amount) => {
+  getHunde (amount = this.state.amount) {
     this.setState({ isLoading: true, calculatedSixteen: false, calculatedSeventeen: false })
     Api.get('/hund/random', {
       params: {
@@ -54,9 +64,7 @@ export default class DogRace extends React.Component {
     this.timer = setTimeout(() => this.startRace(year + 1), 5000)
   }
 
-  static randomColor = () => '#' + ('00000'+(Math.random()*(1<<24)|0).toString(16)).slice(-6)
-
-  calculateDogRankings = (_hunde = this.state.hunde) => {
+  calculateDogRankings (_hunde = this.state.hunde) {
     const hundeRennen = _hunde.map((hund, index) => ({
       label: hund.name,
       data: sortBy(uniqBy(hund.rennen, 'jahr').map((r) => {
@@ -83,7 +91,7 @@ export default class DogRace extends React.Component {
     this.setState({ races: hundeRennen, labels, isLoading: false, hunde: hunde }, () => this.renderChart())
   }
 
-  renderChart = () => {
+  renderChart () {
     const ctx = document.getElementById('dogracechart').getContext('2d')
 
     if (this.chart) {
@@ -113,7 +121,7 @@ export default class DogRace extends React.Component {
     }
   }
 
-  getYear = (year = 2016, _dogs = this.state.races) => {
+  getYear (year = 2016, _dogs = this.state.races) {
     const hunde = this.state.hunde.map((hund) => {
       if (hund.racingTableData) {
         const data = sortBy(hund.racingTableData.map(({ x, y }) => ([x, y])), '0')
@@ -184,3 +192,5 @@ export default class DogRace extends React.Component {
     )
   }
 }
+
+DogRace.randomColor = () => '#' + ('00000'+(Math.random()*(1<<24)|0).toString(16)).slice(-6)

@@ -1,6 +1,9 @@
 'use strict'
 const DBModel = require('./DBModel')
 
+/**
+ * @desc Zwingermodell
+ */
 class Zwinger extends DBModel {
 
   constructor({

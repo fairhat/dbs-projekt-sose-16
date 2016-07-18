@@ -38,6 +38,7 @@ server.register([Vision, Inert, HapiProxy], function(err) {
           }
       }
     }])
+});
     console.log('Starte Frontend Server...')
     server.start(function () {
         console.log('Frontend Server running at:', server.info.uri)

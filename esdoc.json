@@ -1,0 +1,7 @@
+{
+  "source": "./backend/",
+  "destination": "./dist/backend-doc",
+  "plugins": [
+    {"name": "esdoc-es7-plugin"}
+  ]
+}

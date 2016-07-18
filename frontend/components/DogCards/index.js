@@ -4,14 +4,14 @@ import { spring, StaggeredMotion, presets } from 'react-motion'
 import { range } from 'lodash'
 
 export default class DogCards extends React.Component {
-  static propTypes = {
-    hunde: React.PropTypes.array
-  }
 
-  state = {
-    top: 200,
-    opacity: 0,
-    direction: 0,
+  constructor(props) {
+    super(props)
+    this.state = {
+      top: 200,
+      opacity: 0,
+      direction: 0,
+    }
   }
 
   getStyles(prevStyles) {
@@ -63,4 +63,8 @@ export default class DogCards extends React.Component {
       </StaggeredMotion>
     )
   }
+}
+
+DogCards.propTypes = {
+  hunde: React.PropTypes.array
 }

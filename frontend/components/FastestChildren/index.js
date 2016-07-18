@@ -3,24 +3,19 @@ import Api from 'api'
 import { Col, Panel, Table } from 'react-bootstrap'
 
 export default class FastestChildren extends React.Component {
-  static propTypes = {
-    direction: React.PropTypes.oneOf(['fastest', 'slowest']),
-    top: React.PropTypes.number,
-    gender: React.PropTypes.oneOf(['m', 'f']),
+
+  constructor(props) {
+    super(props)
+
+    this.state = {
+      isLoading: false,
+      dogs: []
+    }
+
+    this.getHunde = this.getHunde.bind(this)
   }
 
-  static defaultProps = {
-    direction: 'fastest',
-    top: 15,
-    gender: 'm'
-  }
-
-  state = {
-    isLoading: false,
-    dogs: []
-  }
-
-  getHunde = () => {
+  getHunde() {
     this.setState({ isLoading: true })
     const direction = this.props.direction === 'fastest' ? -1 : 1
     Api.get('/hund/children', {
@@ -76,4 +71,16 @@ export default class FastestChildren extends React.Component {
       </Col>
     )
   }
+}
+
+FastestChildren.propTypes = {
+  direction: React.PropTypes.oneOf(['fastest', 'slowest']),
+  top: React.PropTypes.number,
+  gender: React.PropTypes.oneOf(['m', 'f']),
+}
+
+FastestChildren.defaultProps = {
+  direction: 'fastest',
+  top: 15,
+  gender: 'm'
 }

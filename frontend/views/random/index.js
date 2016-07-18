@@ -10,20 +10,26 @@ import { range } from 'lodash'
 
 export default class Predictions extends React.Component {
 
-  state = {
-    isLoading: false,
-    amount: 12,
-    hunde: [],
-    styles: {
-      top: -100,
+  constructor(props) {
+    super(props)
+
+    this.state = {
+      isLoading: false,
+      amount: 12,
+      hunde: [],
+      styles: {
+        top: -100,
+      }
     }
+
+    this.getHunde = this.getHunde.bind(this)
   }
 
   componentWillMount() {
     this.getHunde(this.state.amount)
   }
 
-  getHunde = (amount = this.state.amount) => {
+  getHunde (amount = this.state.amount) {
     this.setState({ isLoading: true })
     Api.get('/hund/random?amount=' + amount)
       .then((res) => {

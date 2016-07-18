@@ -3,8 +3,17 @@ const DBModel = require('./DBModel')
 const Hund = require('./Hund')
 const Rennen = require('./Rennen')
 
+/**
+ *
+ * @desc Ergebnis Modell
+ *
+ *
+ */
 class Ergebnis extends DBModel {
 
+  /**
+   * @desc Public constructor
+   */
   constructor({
     eid = '',
     distanz = 0,
@@ -17,10 +26,16 @@ class Ergebnis extends DBModel {
     super({ eid, distanz, rang, hund, rennen, punkte, laeufe })
   }
 
+  /**
+   * @desc einen hund zu einem ergebnis finden
+   */
   getHund() {
     return Hund.findOneById(this.hund)
   }
 
+  /**
+   * @desc finde das rennen  zum ergebnis
+   */
   getRennen() {
     return Rennen.findOneById(this.rennen)
   }

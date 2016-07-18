@@ -2,10 +2,6 @@ import React from 'react'
 import Navbar from 'components/Navbar/'
 
 export default class App extends React.Component {
-    static propTypes = {
-        children: React.PropTypes.node,
-    }
-
     render() {
       return (
             <div className="APP-WRAPPER">
@@ -16,4 +12,8 @@ export default class App extends React.Component {
             </div>
         )
     }
+}
+
+App.propTypes = {
+    children: React.PropTypes.node,
 }

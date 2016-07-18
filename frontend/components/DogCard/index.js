@@ -5,11 +5,14 @@ import Chart, { Line } from 'react-chartjs'
 
 export default class DogCard extends React.Component {
 
-  state = {
-    labels: [],
-    placements: [],
-    width: 300,
-    className: 'DogCard' + Math.floor(Math.random() * 100),
+  constructor(props) {
+    super(props)
+    this.state = {
+      labels: [],
+      placements: [],
+      width: 300,
+      className: 'DogCard' + Math.floor(Math.random() * 100),
+    }
   }
 
   componentWillReceiveProps(nextProps) {

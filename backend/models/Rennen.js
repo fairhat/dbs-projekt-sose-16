@@ -1,6 +1,9 @@
 'use strict'
 const DBModel = require('./DBModel')
 
+/**
+ * @name Rennen
+ */
 class Rennen extends DBModel {
 
   constructor({

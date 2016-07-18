@@ -3,6 +3,9 @@ const DBModel = require('./DBModel')
 const Ergebnis = require('./Ergebnis')
 const Zwinger = require('./Zwinger')
 
+/**
+ * @desc Hundemodell
+ */
 class Hund extends DBModel {
 
   constructor({
@@ -21,6 +24,9 @@ class Hund extends DBModel {
     super({ hid, name, geschlecht, geburtsjahr, geburtsland, aufenthaltsland, vater, mutter, zwinger, ergebnisse, rennen })
   }
 
+  /**
+   * @desc rufe mutter eines hundes ab
+   */
   getMutter() {
     if (this.mutter) {
       return Hund.findOneById(this.mutter)
@@ -28,6 +34,9 @@ class Hund extends DBModel {
     return Promise.resolve(null)
   }
 
+  /**
+   * @desc rufe vater eines hundes ab
+   */
   getVater() {
     if (this.vater) {
       return Hund.findOneById(this.vater)
@@ -35,6 +44,9 @@ class Hund extends DBModel {
     return Promise.resolve(null)
   }
 
+  /**
+   * @desc rufe ergebnisse eines hundes ab
+   */
   getErgebnisse() {
     if (this.ergebnisse.length === 0) {
       const fieldName = 'ergebnisse.hund'
@@ -43,12 +55,18 @@ class Hund extends DBModel {
     } else return Promise.resolve(this.ergebnisse) // Cached
   }
 
+  /**
+   * @desc rufe rennen eines hundes ab
+   */
   getRennen() {
     return this
       .getErgebnisse()
       .then((ergebnisse) => Promise.all(ergebnisse.map(erg => (new Ergebnis(erg)).getRennen())))
   }
 
+  /**
+   * @desc rufe zwinger eines hundes ab
+   */
   getZwinger() {
     if (this.zwinger) {
       return Zwinger.findOneById(this.zwinger)
@@ -56,6 +74,10 @@ class Hund extends DBModel {
     return Promise.resolve(null)
   }
 
+  /**
+   * @desc Finde einen Hund mit all seinen beziehungen
+   * @param {String} id
+   */
   static findOneWithRelations(id) {
     return Hund
       .findOneById(id)
@@ -88,6 +110,11 @@ class Hund extends DBModel {
         })
   }
 
+  /**
+   * @desc get random dogs
+   * @param {Number} amount
+   * @param {Number} maxAge
+   */
   static getRandom(amount, maxAge) {
     return Hund.query(`
         SELECT * FROM ${this.tableName}

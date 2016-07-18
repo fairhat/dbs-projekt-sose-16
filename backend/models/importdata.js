@@ -5,6 +5,7 @@
  ********************************************
  *
  * @name ImportData
+ * @desc Importdata klasse
  *
  ********************************************/
 class ImportData {
@@ -105,6 +106,9 @@ class ImportData {
 
 module.exports = ImportData
 
+/**
+ *  @desc importzwinger klasse
+ */
 class ImportZwinger {
   constructor({ id, name }) {
     this.id = id

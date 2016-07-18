@@ -1,0 +1,4897 @@
+[
+  {
+    "__docId__": 0,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/config.example.js",
+    "memberof": null,
+    "longname": "backend/config.example.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "/**\r\n * CONFIG Datei\r\n */\r\nmodule.exports = {\r\n  /**\r\n   * Datenbank Konfiguration\r\n   */\r\n  database: {\r\n      host: 'localhost',\r\n      user: 'postgres',\r\n      pass: 'password',\r\n      port: 5432,\r\n      db:   'dograce',\r\n  },\r\n  /**\r\n   * Backend Server Konfiguration\r\n   */\r\n  server: {\r\n      port: 8000,\r\n      host: 'localhost',\r\n      routes: {\r\n        cors: {\r\n          origin: ['*']\r\n        },\r\n      }\r\n  },\r\n  /**\r\n   * Frontend\r\n   */\r\n  frontend: {\r\n    port: 80,\r\n    host: '0.0.0.0',\r\n  },\r\n}\r\n"
+  },
+  {
+    "__docId__": 1,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/config.js",
+    "memberof": null,
+    "longname": "backend/config.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "/**\r\n * CONFIG Datei\r\n */\r\nmodule.exports = {\r\n  /**\r\n   * Datenbank Konfiguration\r\n   */\r\n  database: {\r\n      host: 'localhost',\r\n      user: 'postgres',\r\n      pass: 'myU4tN93',\r\n      port: 5432,\r\n      db:   'dograce',\r\n  },\r\n  /**\r\n   * Backend Server Konfiguration\r\n   */\r\n  server: {\r\n      port: 8000,\r\n      host: 'localhost',\r\n      routes: {\r\n        cors: {\r\n          origin: ['*']\r\n        },\r\n      }\r\n  },\r\n  /**\r\n   * Frontend\r\n   */\r\n  frontend: {\r\n    port: 80,\r\n    host: '0.0.0.0',\r\n  },\r\n}\r\n"
+  },
+  {
+    "__docId__": 2,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/controllers/HundeController.js",
+    "memberof": null,
+    "longname": "backend/controllers/HundeController.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "'use strict'\r\n\r\nconst Hund = require('../models/Hund')\r\nconst Boom = require('Boom')\r\nconst moment = require('moment')\r\n\r\n\r\n/**\r\n * @name HundeController\r\n * @desc Controller für HundeViews\r\n **/\r\nexport default class HundeController {\r\n\r\n  findOne(req, res) {\r\n    Hund.findOneWithRelations(req.params.id)\r\n        .then((result) => {\r\n          if (result) {\r\n            res(result)\r\n          } else {\r\n            res(Boom.notFound('Hund nicht gefunden.'))\r\n          }\r\n        })\r\n        .catch((e) => res(e))\r\n  }\r\n\r\n  randomDogs(req, res) {\r\n    const thisYear = parseInt(moment().format('YYYY'), 10)\r\n    const maxAge = thisYear - parseInt(req.query.maxAge / 12, 10)\r\n    Hund.getRandom(req.query.amount, maxAge)\r\n        .then((dogs) => dogs.map(d => new Hund(d)))\r\n        .then((dogs) => {\r\n          if (dogs.length > 0) {\r\n            res(dogs)\r\n          } else {\r\n            res(Boom.notFound('Keine Hunde gefunden.'))\r\n          }\r\n        }).catch(res)\r\n  }\r\n\r\n  all(req, res) {\r\n    const direction = req.query.direction === 1 ? 'ASC' : 'DESC'\r\n    const { page, itemsPerPage, sortBy } = req.query\r\n    Hund.find(undefined, undefined, undefined, { [sortBy]: direction }, { page, itemsPerPage })\r\n      .then(res)\r\n      .catch(res)\r\n  }\r\n\r\n  avg(req, res) {\r\n    const direction = req.query.direction === 1 ? 'ASC' : 'DESC'\r\n    const { page, itemsPerPage } = req.query\r\n    const offset = page * itemsPerPage\r\n    const limit = itemsPerPage\r\n\r\n    Hund.query(`SELECT AVG(ergebnisse.punkte)::int AS \"average\",\r\n                  hunde.hid,\r\n                  hunde.name\r\n                FROM hunde\r\n                FULL JOIN ergebnisse\r\n                  ON ergebnisse.hund = hunde.hid\r\n                GROUP BY hunde.hid, hunde.name\r\n                ORDER BY average ${direction}\r\n                OFFSET ${offset}\r\n                LIMIT ${limit};`)\r\n                .then(res)\r\n                .catch(res)\r\n  }\r\n\r\n  races(req, res) {\r\n    const direction = req.query.direction === 1 ? 'ASC' : 'DESC'\r\n    const { page, itemsPerPage } = req.query\r\n    const offset = page * itemsPerPage\r\n    const limit = itemsPerPage\r\n\r\n    Hund.query(`SELECT MAX(ergebnisse.punkte/ergebnisse.laeufe) AS \"best\",\r\n                  hunde.hid AS \"hid\",\r\n                  hunde.name AS \"name\"\r\n                FROM hunde\r\n                FULL JOIN ergebnisse\r\n                  ON ergebnisse.hund = hunde.hid\r\n                GROUP BY hunde.hid, hunde.name\r\n                ORDER BY best ${direction}\r\n                OFFSET ${offset}\r\n                LIMIT ${limit};`)\r\n                .then(res)\r\n                .catch(console.error)\r\n  }\r\n\r\n  children(req, res) {\r\n    const parent = req.query.gender === 'm' ? 'vater' : 'mutter'\r\n    const { page, itemsPerPage } = req.query\r\n    const offset = page * itemsPerPage\r\n    const limit = itemsPerPage\r\n    const direction = req.query.direction === 1 ? 'ASC' : 'DESC'\r\n    const top = req.query.top\r\n\r\n    Hund.query(`SELECT MAX(ergebnisse.punkte/ergebnisse.laeufe) AS \"best\",\r\n                  parent.hid AS \"parentId\",\r\n                  parent.name AS \"parentName\",\r\n                  string_agg(child.name, ', ') AS \"children\"\r\n              \tFROM hunde AS parent\r\n                FULL JOIN hunde AS child\r\n                  ON parent.hid = child.${parent}\r\n              \tFULL JOIN ergebnisse\r\n                  ON ergebnisse.hund = child.hid\r\n              \tFULL JOIN rennen\r\n                  ON rennen.rid = ergebnisse.rennen\r\n              \tWHERE child.${parent} IS NOT NULL AND\r\n                  ergebnisse.rang <= ${top}\r\n            \t  GROUP BY parent.name,\r\n                  parent.hid\r\n              \tORDER BY best ${direction}\r\n                OFFSET ${offset}\r\n                LIMIT ${limit};`)\r\n                .then(res)\r\n                .catch(res)\r\n  }\r\n}\r\n\r\n// module.exports = HundeController\r\n"
+  },
+  {
+    "__docId__": 3,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Hund",
+    "memberof": "backend/controllers/HundeController.js",
+    "longname": "backend/controllers/HundeController.js~Hund",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/controllers/HundeController.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 4,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Boom",
+    "memberof": "backend/controllers/HundeController.js",
+    "longname": "backend/controllers/HundeController.js~Boom",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/controllers/HundeController.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 4,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 5,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "moment",
+    "memberof": "backend/controllers/HundeController.js",
+    "longname": "backend/controllers/HundeController.js~moment",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/controllers/HundeController.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 5,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 6,
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "HundeController",
+    "memberof": "backend/controllers/HundeController.js",
+    "longname": "backend/controllers/HundeController.js~HundeController",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/controllers/HundeController.js",
+    "importStyle": "HundeController",
+    "description": "Controller für HundeViews",
+    "lineNumber": 12,
+    "unknown": [
+      {
+        "tagName": "@name",
+        "tagValue": "HundeController"
+      }
+    ],
+    "interface": false
+  },
+  {
+    "__docId__": 7,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "findOne",
+    "memberof": "backend/controllers/HundeController.js~HundeController",
+    "longname": "backend/controllers/HundeController.js~HundeController#findOne",
+    "access": null,
+    "description": null,
+    "lineNumber": 14,
+    "undocument": true,
+    "params": [
+      {
+        "name": "req",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "res",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 8,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "randomDogs",
+    "memberof": "backend/controllers/HundeController.js~HundeController",
+    "longname": "backend/controllers/HundeController.js~HundeController#randomDogs",
+    "access": null,
+    "description": null,
+    "lineNumber": 26,
+    "undocument": true,
+    "params": [
+      {
+        "name": "req",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "res",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 9,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "all",
+    "memberof": "backend/controllers/HundeController.js~HundeController",
+    "longname": "backend/controllers/HundeController.js~HundeController#all",
+    "access": null,
+    "description": null,
+    "lineNumber": 40,
+    "undocument": true,
+    "params": [
+      {
+        "name": "req",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "res",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 10,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "avg",
+    "memberof": "backend/controllers/HundeController.js~HundeController",
+    "longname": "backend/controllers/HundeController.js~HundeController#avg",
+    "access": null,
+    "description": null,
+    "lineNumber": 48,
+    "undocument": true,
+    "params": [
+      {
+        "name": "req",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "res",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 11,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "races",
+    "memberof": "backend/controllers/HundeController.js~HundeController",
+    "longname": "backend/controllers/HundeController.js~HundeController#races",
+    "access": null,
+    "description": null,
+    "lineNumber": 68,
+    "undocument": true,
+    "params": [
+      {
+        "name": "req",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "res",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 12,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "children",
+    "memberof": "backend/controllers/HundeController.js~HundeController",
+    "longname": "backend/controllers/HundeController.js~HundeController#children",
+    "access": null,
+    "description": null,
+    "lineNumber": 88,
+    "undocument": true,
+    "params": [
+      {
+        "name": "req",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "res",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 13,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/controllers/ZwingerController.js",
+    "memberof": null,
+    "longname": "backend/controllers/ZwingerController.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "'use strict'\r\nconst Boom = require('Boom')\r\n\r\n/**\r\n * @name ZwingerController\r\n * @desc Controller für Zwinger Views\r\n */\r\nexport default class ZwingerController {\r\n\r\n  static index(req, res) {\r\n    return res()\r\n  }\r\n\r\n  static getTop(req, res) {\r\n    res()\r\n  }\r\n}\r\n\r\n// module.exports = ZwingerController\r\n"
+  },
+  {
+    "__docId__": 14,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Boom",
+    "memberof": "backend/controllers/ZwingerController.js",
+    "longname": "backend/controllers/ZwingerController.js~Boom",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/controllers/ZwingerController.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 2,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 15,
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "ZwingerController",
+    "memberof": "backend/controllers/ZwingerController.js",
+    "longname": "backend/controllers/ZwingerController.js~ZwingerController",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/controllers/ZwingerController.js",
+    "importStyle": "ZwingerController",
+    "description": "Controller für Zwinger Views",
+    "lineNumber": 8,
+    "unknown": [
+      {
+        "tagName": "@name",
+        "tagValue": "ZwingerController"
+      }
+    ],
+    "interface": false
+  },
+  {
+    "__docId__": 16,
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "index",
+    "memberof": "backend/controllers/ZwingerController.js~ZwingerController",
+    "longname": "backend/controllers/ZwingerController.js~ZwingerController.index",
+    "access": null,
+    "description": null,
+    "lineNumber": 10,
+    "undocument": true,
+    "params": [
+      {
+        "name": "req",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "res",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 17,
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "getTop",
+    "memberof": "backend/controllers/ZwingerController.js~ZwingerController",
+    "longname": "backend/controllers/ZwingerController.js~ZwingerController.getTop",
+    "access": null,
+    "description": null,
+    "lineNumber": 14,
+    "undocument": true,
+    "params": [
+      {
+        "name": "req",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "res",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 18,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/index.js",
+    "memberof": null,
+    "longname": "backend/index.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "'use strict'\r\n\r\nconst Hapi = require('hapi')\r\nconst Inert = require('inert')\r\nconst Lout = require('lout')\r\nconst Vision = require('vision')\r\nconst Routes = require('./routes')\r\nconst Database = require('./lib/database')\r\nconst config = require('./config').server\r\n\r\nconst server = new Hapi.Server()\r\n\r\nserver.connection(config)\r\n\r\nconst loutRegister = {\r\n    register: Lout,\r\n    options: { endpoint: '/docs' }\r\n}\r\n\r\nserver.register([Vision, Inert, loutRegister], function(err) {\r\n\r\n    if (err) {\r\n        console.error('Failed loading plugins')\r\n        process.exit(1)\r\n    }\r\n\r\n    server.route(Routes)\r\n\r\n    console.log('Starte Backend Server...')\r\n    server.start(function () {\r\n        console.log('Server running at:', server.info.uri)\r\n    })\r\n})\r\n"
+  },
+  {
+    "__docId__": 19,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Hapi",
+    "memberof": "backend/index.js",
+    "longname": "backend/index.js~Hapi",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/index.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 20,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Inert",
+    "memberof": "backend/index.js",
+    "longname": "backend/index.js~Inert",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/index.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 4,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 21,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Lout",
+    "memberof": "backend/index.js",
+    "longname": "backend/index.js~Lout",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/index.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 5,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 22,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Vision",
+    "memberof": "backend/index.js",
+    "longname": "backend/index.js~Vision",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/index.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 6,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 23,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Routes",
+    "memberof": "backend/index.js",
+    "longname": "backend/index.js~Routes",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/index.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 7,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 24,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Database",
+    "memberof": "backend/index.js",
+    "longname": "backend/index.js~Database",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/index.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 8,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 25,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "config",
+    "memberof": "backend/index.js",
+    "longname": "backend/index.js~config",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/index.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 9,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 26,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "server",
+    "memberof": "backend/index.js",
+    "longname": "backend/index.js~server",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/index.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 11,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 27,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "loutRegister",
+    "memberof": "backend/index.js",
+    "longname": "backend/index.js~loutRegister",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/index.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 15,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 28,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/lib/database.js",
+    "memberof": null,
+    "longname": "backend/lib/database.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "const fs = require('fs')\r\nconst pg = require('pg')\r\nconst { host, user, pass, port, db } = require('../config').database\r\nconst connectionString = `postgres://${user}:${pass}@${host}:${port}/${db}`\r\n\r\nconst client = new pg.Client(connectionString)\r\nclient.connect()\r\nmodule.exports = client\r\n"
+  },
+  {
+    "__docId__": 29,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "fs",
+    "memberof": "backend/lib/database.js",
+    "longname": "backend/lib/database.js~fs",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/lib/database.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 1,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 30,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "pg",
+    "memberof": "backend/lib/database.js",
+    "longname": "backend/lib/database.js~pg",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/lib/database.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 2,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 31,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "host",
+    "memberof": "backend/lib/database.js",
+    "longname": "backend/lib/database.js~host",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/lib/database.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 32,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "connectionString",
+    "memberof": "backend/lib/database.js",
+    "longname": "backend/lib/database.js~connectionString",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/lib/database.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 4,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 33,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "client",
+    "memberof": "backend/lib/database.js",
+    "longname": "backend/lib/database.js~client",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/lib/database.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 6,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 34,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/lib/run_migration.js",
+    "memberof": null,
+    "longname": "backend/lib/run_migration.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "'use strict'\r\n\r\nconst args = require('args')\r\nconst migrations = require('../migrations/')\r\n\r\nfunction runAllMigrations(migs) {\r\n    return migs.reduce(runMigration, Promise.resolve())\r\n}\r\n\r\nfunction runMigration(mig, next) {\r\n    console.log(`MIGRATION START: ${mig.name}`)\r\n    return new Promise((resolve, reject) => {\r\n        mig()\r\n            .then(() => {\r\n                console.log(`MIGRATION END: ${mig.name}`)\r\n                if (next) {\r\n                    runMigration(next)\r\n                }\r\n                else {\r\n                    resolve()\r\n                }\r\n            })\r\n            .catch((e) => {\r\n                reject(e)\r\n            })\r\n    })\r\n}\r\n\r\nargs\r\n    .option('name', 'Name of the Migration (csv, tbl) - -n=ALL to run all migrations sequentially', 'csv')\r\n    .command('run', 'Run Migrations', (name, sub, options) => {\r\n        if (migrations[options.name]) {\r\n            if (options.name === 'ALL') {\r\n                console.log(`Running ALL migrations:`)\r\n                runAllMigrations(migrations.ALL, (mig) => {\r\n                    runMigration(mig)\r\n                })\r\n            } else {\r\n            console.log(`Ok, running migration: ${options.name}`)\r\n            const run = migrations[options.name]\r\n            run()\r\n                .then(() => {\r\n                    console.log(`Finished migration: ${options.name} - bye...`)\r\n                    process.exit()\r\n                })\r\n            }\r\n        } else {\r\n            console.log(`Couldn't find migration: ${options.name}, are you sure this is the correct name?`)\r\n            process.exit()\r\n        }\r\n    })\r\n    .command('list', 'List Migrations', (name, sub, options) => {\r\n        const NO = 'Keine Beschreibung vorhanden.'\r\n        console.log('---------------------------------------------')\r\n        console.log('|                MIGRATIONS                  ')\r\n        console.log('---------------------------------------------')\r\n        console.log('| name | description')\r\n        console.log('---------------------------------------------')\r\n        Object.keys(migrations).forEach((mig) => {\r\n            if (mig !== 'ALL') {\r\n                const desc = migrations[mig].description || NO\r\n                const splitted = desc.split('\\n')\r\n                console.log(`| ${mig} | ${(splitted).join('\\n| ' + mig + ' | ')}`)\r\n                console.log('---------------------------------------------')\r\n            }\r\n        })\r\n        process.exit()   \r\n    })\r\n\r\nconst flags = args.parse(process.argv, { help: true, version: true })"
+  },
+  {
+    "__docId__": 35,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "args",
+    "memberof": "backend/lib/run_migration.js",
+    "longname": "backend/lib/run_migration.js~args",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/lib/run_migration.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 36,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "migrations",
+    "memberof": "backend/lib/run_migration.js",
+    "longname": "backend/lib/run_migration.js~migrations",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/lib/run_migration.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 4,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 37,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "runAllMigrations",
+    "memberof": "backend/lib/run_migration.js",
+    "longname": "backend/lib/run_migration.js~runAllMigrations",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/lib/run_migration.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 6,
+    "undocument": true,
+    "params": [
+      {
+        "name": "migs",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 38,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "runMigration",
+    "memberof": "backend/lib/run_migration.js",
+    "longname": "backend/lib/run_migration.js~runMigration",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/lib/run_migration.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 10,
+    "undocument": true,
+    "params": [
+      {
+        "name": "mig",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "next",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 39,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "flags",
+    "memberof": "backend/lib/run_migration.js",
+    "longname": "backend/lib/run_migration.js~flags",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/lib/run_migration.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 70,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 40,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/migrations/01_create_tables.js",
+    "memberof": null,
+    "longname": "backend/migrations/01_create_tables.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "'use strict'\r\n\r\nconst DB            = require('./../lib/database')\r\nconst fs            = require('fs')\r\nconst SQLQuery      = fs.readFileSync(__dirname + './../data/create_db.sql', 'utf8')\r\n\r\n/**\r\n * @desc Führt Funktion zum erzeugen der Tabelle aus\r\n * @return undefined\r\n */\r\nexport function createTables() {\r\n    console.log('Tabellen werden erstellt...')\r\n    return new Promise((resolve, reject) => {\r\n        DB.query(SQLQuery, (err, result) => {\r\n            if (err) {\r\n                reject(err)\r\n            } else {\r\n                resolve('Tabellen in der Datenbank erstellt.')\r\n                console.log('Tabellen in der Datenbank erstellt')\r\n            }\r\n        })\r\n    })\r\n}\r\n\r\n/**\r\n * @desc main funktion für migration\r\n */\r\nexport function main() {\r\n    return createTables().catch((e) => {\r\n        console.log(`Fehler beim Erstellen der Tabellen... \\nMögliche Ursachen: \\n1. Datenbank existiert nicht.\\n2. Keine Verbindung zur Datenbank möglich.\\n3. Tabellen existieren bereits`)\r\n        console.log('Stacktrace:')\r\n        console.error(e)\r\n        throw e;\r\n    })\r\n}\r\n\r\nexport default main\r\nexport const cmd = 'tbl'\r\nexport const description = `Erstellt die Tabellen\r\n(Hunde, Zwinger, etc.)\r\nin der Datenbank\r\nBefehl: npm run migrations -- -n=tbl`\r\n"
+  },
+  {
+    "__docId__": 41,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "DB",
+    "memberof": "backend/migrations/01_create_tables.js",
+    "longname": "backend/migrations/01_create_tables.js~DB",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/migrations/01_create_tables.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 42,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "fs",
+    "memberof": "backend/migrations/01_create_tables.js",
+    "longname": "backend/migrations/01_create_tables.js~fs",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/migrations/01_create_tables.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 4,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 43,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "SQLQuery",
+    "memberof": "backend/migrations/01_create_tables.js",
+    "longname": "backend/migrations/01_create_tables.js~SQLQuery",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/migrations/01_create_tables.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 5,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 44,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "createTables",
+    "memberof": "backend/migrations/01_create_tables.js",
+    "longname": "backend/migrations/01_create_tables.js~createTables",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/01_create_tables.js",
+    "importStyle": "{createTables}",
+    "description": "Führt Funktion zum erzeugen der Tabelle aus",
+    "lineNumber": 11,
+    "params": [],
+    "return": {
+      "nullable": null,
+      "types": [
+        "*"
+      ],
+      "spread": false,
+      "description": "undefined"
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 45,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "main",
+    "memberof": "backend/migrations/01_create_tables.js",
+    "longname": "backend/migrations/01_create_tables.js~main",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/01_create_tables.js",
+    "importStyle": "{main}",
+    "description": "main funktion für migration",
+    "lineNumber": 28,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 46,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "cmd",
+    "memberof": "backend/migrations/01_create_tables.js",
+    "longname": "backend/migrations/01_create_tables.js~cmd",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/01_create_tables.js",
+    "importStyle": "{cmd}",
+    "description": null,
+    "lineNumber": 38,
+    "undocument": true,
+    "type": {
+      "types": [
+        "string"
+      ]
+    }
+  },
+  {
+    "__docId__": 47,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "description",
+    "memberof": "backend/migrations/01_create_tables.js",
+    "longname": "backend/migrations/01_create_tables.js~description",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/01_create_tables.js",
+    "importStyle": "{description}",
+    "description": null,
+    "lineNumber": 39,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 48,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/migrations/02_import_csv.js",
+    "memberof": null,
+    "longname": "backend/migrations/02_import_csv.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "'use strict'\r\n\r\nconst DB            = require('./../lib/database')\r\nconst fs            = require('fs')\r\nconst _             = require('lodash')\r\nconst ImportData    = require('./../models/importdata.js')\r\nconst ImportZwinger = ImportData.ImportZwinger\r\nconst CSV           = readCSV()\r\nconst DOGS          = createDogs(CSV)\r\nconst UNIQUEDOGS    = createUniqueDogs(DOGS)\r\nconst ZWINGER       = createImportZwinger(UNIQUEDOGS)\r\nconst RACES         = createRaces(DOGS)\r\n\r\n/**\r\n * @desc importiert die Hunde in die Datenbank\r\n */\r\nexport function importDogs() {\r\n    return new Promise((resolve, reject) => {\r\n        let counter = 1\r\n        const insertVars = UNIQUEDOGS.map((dog) => dog.transformToSQLInsert())\r\n\r\n        const queryVars = insertVars.map((v, i) => `(${v.map(k => {\r\n            const count = counter\r\n            counter = counter + 1\r\n            return `$${count}`\r\n        }).join(',')})`).join(',')\r\n\r\n        const QUERY = `\r\n        INSERT INTO hunde\r\n            (hid, name, geschlecht, geburtsjahr, geburtsland, aufenthaltsland)\r\n        VALUES ${queryVars};\r\n        `\r\n\r\n        DB.query(QUERY, _.flatten(insertVars), (err) => {\r\n            if (err) {\r\n                reject(err)\r\n            }\r\n            else {\r\n                resolve('Hunde importiert')\r\n                console.log('Hunde importiert')\r\n            }\r\n        })\r\n    })\r\n}\r\n\r\n/**\r\n * @desc updated vater/mutter der hunde in die db\r\n */\r\nexport function updateMomDad() {\r\n    return new Promise((resolve, reject) => {\r\n        const DogDad = UNIQUEDOGS.map(({ id, vaterID }) => `WHEN ${id} THEN ${vaterID}`).join('\\n                    ')\r\n        const DogMom = UNIQUEDOGS.map(({ id, mutterID }) => `WHEN ${id} THEN ${mutterID}`).join('\\n                    ')\r\n\r\n        const UpdateMomDad = `\r\n            UPDATE hunde\r\n            SET vater = CASE hid\r\n                        ${DogDad}\r\n                        ELSE null\r\n                        END;\r\n            UPDATE hunde\r\n            SET mutter = CASE hid\r\n                        ${DogMom}\r\n                        ELSE null\r\n                        END\r\n        `\r\n        // fs.writeFileSync('./momDad.sql', UpdateMomDad, 'utf8')\r\n\r\n        DB.query(UpdateMomDad, (err) => {\r\n            if (err) {\r\n                reject(err)\r\n            }\r\n            else {\r\n                resolve('Eltern aktualisiert')\r\n                console.log('Eltern aktualisiert')\r\n            }\r\n        })\r\n    })\r\n}\r\n\r\n/**\r\n * @desc fügt zwinger in die db\r\n */\r\nexport function insertZwinger() {\r\n    return new Promise((resolve, reject) => {\r\n        let counter = 1\r\n\r\n        const zwingerInserts = ZWINGER.map(({ id, name }) => ([id, name]))\r\n        const zwingerVars = zwingerInserts.map(() => {\r\n            const id = counter\r\n            counter = counter + 1\r\n            const name = counter\r\n            counter = counter + 1\r\n\r\n            return `($${id}, $${name})`\r\n        }).join(',')\r\n        const QUERY = `\r\n        INSERT INTO zwinger\r\n            (zid, name)\r\n        VALUES ${zwingerVars};\r\n        `\r\n\r\n        DB.query(QUERY, _.flatten(zwingerInserts), (err) => {\r\n            if (err) {\r\n                reject(err)\r\n            }\r\n            else {\r\n                resolve('Zwinger importiert')\r\n                console.log('Zwinger importiert')\r\n            }\r\n        })\r\n    })\r\n}\r\n\r\n/**\r\n * @desc setzt beziehung hunde -> zwinger\r\n */\r\nexport function updateHundeZwinger() {\r\n    return new Promise((resolve, reject) => {\r\n        const DogZwinger = UNIQUEDOGS.map(({ id, zwingerID }) => `WHEN ${id} THEN ${zwingerID}`).join('\\n                    ')\r\n\r\n        const UpdateZwinger = `\r\n            UPDATE hunde\r\n            SET zwinger = CASE hid\r\n                        ${DogZwinger}\r\n                        ELSE null\r\n                        END;\r\n        `\r\n        // fs.writeFileSync('./momDad.sql', UpdateZwinger, 'utf8')\r\n\r\n        DB.query(UpdateZwinger, (err) => {\r\n            if (err) {\r\n                reject(err)\r\n            }\r\n            else {\r\n                resolve('Hunde -> Zwinger aktualisiert')\r\n                console.log('Hunde -> Zwinger aktualisiert')\r\n            }\r\n        })\r\n    })\r\n}\r\n\r\n/**\r\n * @desc fügt ergebnisse hinzu\r\n */\r\nexport function insertResults() {\r\n    return new Promise((resolve, reject) => {\r\n        let counter = 1\r\n\r\n        const inserts = DOGS.map((({\r\n            id,\r\n            avgDistance,\r\n            name,\r\n            rang,\r\n            sumPoints,\r\n            raceCountry,\r\n            raceYear,\r\n            runCount,\r\n        }) => {\r\n            const dog = UNIQUEDOGS.find(d => d.name === name)\r\n            const race = RACES.find(({ year, country }) => year === raceYear && country === raceCountry)\r\n            return [\r\n                id,\r\n                avgDistance,\r\n                rang,\r\n                dog.id,\r\n                race.id,\r\n                sumPoints,\r\n                runCount\r\n            ]\r\n        }))\r\n\r\n        const vars = inserts.map((x) => {\r\n            // ES6 Magic, Array Comprehension -> [Array from 1 to length of x]\r\n            const vars = x.map((y) => {\r\n                const count = counter\r\n                counter += 1\r\n                return '$' + count\r\n            })\r\n            return `(${vars.join(', ')})`\r\n        }).join(',')\r\n\r\n        const QUERY = `\r\n        INSERT INTO ergebnisse\r\n            (eid, distanz, rang, hund, rennen, punkte, laeufe)\r\n        VALUES ${vars}\r\n        `\r\n\r\n        DB.query(QUERY, _.flatten(inserts), (err) => {\r\n            if (err) reject(err)\r\n            else {\r\n                resolve('Ergebnisse importiert')\r\n                console.log('Ergebnisse importiert')\r\n            }\r\n        })\r\n    })\r\n}\r\n\r\n/**\r\n * @desc fügt rennen hinzu\r\n */\r\nexport function insertRaces() {\r\n    return new Promise((resolve, reject) => {\r\n        let counter = 1\r\n\r\n        const raceInserts = RACES.map((({ id, year, country }) => ([id, year, country])))\r\n\r\n        const raceVars = raceInserts.map((z) => {\r\n            const id = counter\r\n            counter = counter + 1\r\n            const year = counter\r\n            counter = counter + 1\r\n            const country = counter\r\n            counter = counter + 1\r\n\r\n            return `($${id}, $${year}, $${country})`\r\n        }).join(',')\r\n\r\n        const QUERY = `\r\n        INSERT INTO rennen\r\n            (rid, jahr, ort)\r\n        VALUES ${raceVars};\r\n        `\r\n\r\n        DB.query(QUERY, _.flatten(raceInserts), (err) => {\r\n            if (err) {\r\n                reject(err)\r\n            }\r\n            else {\r\n                resolve('Rennen importiert')\r\n                console.log('Rennen importiert')\r\n            }\r\n        })\r\n    })\r\n}\r\n\r\n/**\r\n * @desc löscht alle tabellen\r\n */\r\nexport function dropTables () {\r\n    return new Promise((resolve, reject) => {\r\n        DB.query(`\r\n            DELETE FROM ergebnisse;\r\n            DELETE FROM hunde;\r\n            DELETE FROM zwinger;\r\n            DELETE FROM rennen;\r\n        `, (err) => {\r\n            if (err) {\r\n                reject(err)\r\n            } else {\r\n                resolve('Tabellen geleert')\r\n                console.log('Tabellen geleert')\r\n            }\r\n        })\r\n    })\r\n}\r\n\r\n/**\r\n * @desc füllt die hundedaten in-memory\r\n */\r\nexport function fillInitialDogData() {\r\n    console.log('Bereite CSV Datei für import vor')\r\n    UNIQUEDOGS.forEach((dog) => {\r\n        UNIQUEDOGS.forEach(({id, name}) => {\r\n            // finde vater und mutter eines hundes\r\n            if (name === dog.mutter) {\r\n                dog.mutterID = id\r\n                return;\r\n            }\r\n\r\n            if (name === dog.vater) {\r\n                dog.vaterID = id\r\n                return;\r\n            }\r\n        })\r\n\r\n        const myZwinger = ZWINGER.find(zw => zw.name === dog.zwinger)\r\n        dog.zwingerID = myZwinger ? myZwinger.id : null\r\n    })\r\n\r\n    return Promise.resolve()\r\n}\r\n\r\n/**\r\n * @param {Array} Args\r\n * @desc main funktion\r\n */\r\nexport function main(args) {\r\n    return fillInitialDogData()\r\n        .then(dropTables)\r\n        .then(importDogs)\r\n        .then(updateMomDad)\r\n        .then(insertZwinger)\r\n        .then(updateHundeZwinger)\r\n        .then(insertRaces)\r\n        .then(insertResults)\r\n        .then(() => console.log('Fertig! Alle Daten wurden von der CSV importiert.'))\r\n        .catch((err) => console.error(err))\r\n}\r\n\r\n/**\r\n * @desc Read CSV Datei\r\n */\r\nexport function readCSV() {\r\n    return fs.readFileSync(__dirname + './../data/greyhounddata.csv', 'utf8')\r\n             .split('\\n')\r\n             .map(x => x.split(';'))\r\n}\r\n\r\n/**\r\n * @desc Erstellt Hunde Instanzen\r\n */\r\nexport function createDogs(csvfile) {\r\n    return CSV.map((row, index) => new ImportData(index + 1, row))\r\n}\r\n\r\n/**\r\n * @desc findet alle unique hunde\r\n */\r\nexport function createUniqueDogs(dogs) {\r\n    return _.uniqBy(dogs, 'name')\r\n}\r\n\r\n/**\r\n * @desc erstellt zwinger Instanzen\r\n */\r\nexport function createImportZwinger(uniqDogs) {\r\n    return _.uniqBy(uniqDogs, 'zwinger')\r\n            .map((z) => z.zwinger)\r\n            .filter((z) => z && z.length > 0)\r\n            .map((name, id) => new ImportZwinger({ name, id: id + 1 }))\r\n}\r\n\r\n/**\r\n * @desc erstellt rennen\r\n */\r\nexport function createRaces(dogs) {\r\n    return (_.uniqBy(dogs, 'raceYearCountry')).map(({ raceYear, raceCountry }, index) => ({ year: raceYear, country: raceCountry, id: index + 1 }))\r\n}\r\n\r\nexport default main\r\nexport const cmd = 'csv'\r\nexport const description = `Liest die greyhounddata.csv\r\nein und importiert die Daten\r\nin das relationale Datenbankschema\r\nBefehl: npm run migrations -- -n=csv`\r\n"
+  },
+  {
+    "__docId__": 49,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "DB",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~DB",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 50,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "fs",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~fs",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 4,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 51,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "_",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~_",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 5,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 52,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "ImportData",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~ImportData",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 6,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 53,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "ImportZwinger",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~ImportZwinger",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 7,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 54,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "CSV",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~CSV",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 8,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 55,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "DOGS",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~DOGS",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 9,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 56,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "UNIQUEDOGS",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~UNIQUEDOGS",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 10,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 57,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "ZWINGER",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~ZWINGER",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 11,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 58,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "RACES",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~RACES",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 12,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 59,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "importDogs",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~importDogs",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{importDogs}",
+    "description": "importiert die Hunde in die Datenbank",
+    "lineNumber": 17,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 60,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "updateMomDad",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~updateMomDad",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{updateMomDad}",
+    "description": "updated vater/mutter der hunde in die db",
+    "lineNumber": 49,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 61,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "insertZwinger",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~insertZwinger",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{insertZwinger}",
+    "description": "fügt zwinger in die db",
+    "lineNumber": 83,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 62,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "updateHundeZwinger",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~updateHundeZwinger",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{updateHundeZwinger}",
+    "description": "setzt beziehung hunde -> zwinger",
+    "lineNumber": 117,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 63,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "insertResults",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~insertResults",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{insertResults}",
+    "description": "fügt ergebnisse hinzu",
+    "lineNumber": 145,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 64,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "insertRaces",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~insertRaces",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{insertRaces}",
+    "description": "fügt rennen hinzu",
+    "lineNumber": 201,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 65,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "dropTables",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~dropTables",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{dropTables}",
+    "description": "löscht alle tabellen",
+    "lineNumber": 239,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 66,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "fillInitialDogData",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~fillInitialDogData",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{fillInitialDogData}",
+    "description": "füllt die hundedaten in-memory",
+    "lineNumber": 260,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 67,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "main",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~main",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{main}",
+    "description": "main funktion",
+    "lineNumber": 287,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Array"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "Args",
+        "description": ""
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 68,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "readCSV",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~readCSV",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{readCSV}",
+    "description": "Read CSV Datei",
+    "lineNumber": 303,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 69,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "createDogs",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~createDogs",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{createDogs}",
+    "description": "Erstellt Hunde Instanzen",
+    "lineNumber": 312,
+    "params": [
+      {
+        "name": "csvfile",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 70,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "createUniqueDogs",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~createUniqueDogs",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{createUniqueDogs}",
+    "description": "findet alle unique hunde",
+    "lineNumber": 319,
+    "params": [
+      {
+        "name": "dogs",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 71,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "createImportZwinger",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~createImportZwinger",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{createImportZwinger}",
+    "description": "erstellt zwinger Instanzen",
+    "lineNumber": 326,
+    "params": [
+      {
+        "name": "uniqDogs",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 72,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "createRaces",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~createRaces",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{createRaces}",
+    "description": "erstellt rennen",
+    "lineNumber": 336,
+    "params": [
+      {
+        "name": "dogs",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 73,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "cmd",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~cmd",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{cmd}",
+    "description": null,
+    "lineNumber": 341,
+    "undocument": true,
+    "type": {
+      "types": [
+        "string"
+      ]
+    }
+  },
+  {
+    "__docId__": 74,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "description",
+    "memberof": "backend/migrations/02_import_csv.js",
+    "longname": "backend/migrations/02_import_csv.js~description",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/migrations/02_import_csv.js",
+    "importStyle": "{description}",
+    "description": null,
+    "lineNumber": 342,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 75,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/migrations/index.js",
+    "memberof": null,
+    "longname": "backend/migrations/index.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "'use strict'\r\n\r\nconst tbl = require('./01_create_tables.js')\r\nconst csv = require('./02_import_csv.js')\r\n\r\nmodule.exports = {\r\n    tbl,\r\n    csv,\r\n}\r\n\r\nmodule.exports.ALL = [ tbl, csv ]"
+  },
+  {
+    "__docId__": 76,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "tbl",
+    "memberof": "backend/migrations/index.js",
+    "longname": "backend/migrations/index.js~tbl",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/migrations/index.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 77,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "csv",
+    "memberof": "backend/migrations/index.js",
+    "longname": "backend/migrations/index.js~csv",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/migrations/index.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 4,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 78,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/models/DBModel.js",
+    "memberof": null,
+    "longname": "backend/models/DBModel.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "'use strict'\r\nconst Query = require('./Query')\r\n\r\n/**\r\n * @desc DBModel Base Class\r\n */\r\nclass DBModel {\r\n\r\n  constructor(props = {}) {\r\n    Object.keys(props).forEach((prop) => this[prop] = props[prop])\r\n  }\r\n\r\n  /**\r\n   *\r\n   * @desc get table name, muss von kindern überschrieben werden\r\n   * @static\r\n   **/\r\n  static get tableName() {\r\n    console.warn(`NO TABLENAME SET FOR ${this.constructor.name}`)\r\n    return ''\r\n  }\r\n\r\n  /**\r\n  *\r\n  * @desc get id field - muss überschrieben werden\r\n  * @static\r\n  *\r\n  */\r\n  static get idField() {\r\n    console.warn(`NO IDFIELD SET FOR ${this.constructor.name}`)\r\n    return ''\r\n  }\r\n\r\n  /**\r\n   * @desc finde ein modell über die id\r\n   */\r\n  static findOneById(id = 0) {\r\n    return this.findOne(this.idField, `= ${id}`)\r\n  }\r\n\r\n  /**\r\n   *\r\n   * @desc finde alle instanzen eines modells\r\n   *\r\n   */\r\n  static getAll() {\r\n    return this.find()\r\n  }\r\n\r\n  /**\r\n   *\r\n   * @desc findet eine instanz mit verschiedenen bedingungen\r\n   * @param {String} fieldName\r\n   * @param {String} condition\r\n   * @param {String|Array[String]} fields\r\n   * @param {Object} sortBy\r\n   */\r\n  static findOne(\r\n    fieldName = '',\r\n    condition = '',\r\n    fields = '*',\r\n    sortBy = {}\r\n    ) {\r\n    if (condition.length > 0) {\r\n      return (new Query())\r\n        .select(fields)\r\n        .from(this.tableName)\r\n        .where(`${fieldName} ${condition}`)\r\n        .limit(1)\r\n        .orderBy(sortBy)\r\n        .done()\r\n        .then(([first, ...rest]) => first)\r\n    } else {\r\n      return Promise.resolve(null)\r\n    }\r\n  }\r\n\r\n  /**\r\n   *\r\n   * @desc finde mehrere instanzen mit den bedingungen\r\n   * @param {String} fieldName\r\n   * @param {String} condition\r\n   * @param {String|Array[String]} fields\r\n   * @param {Object} sortBy\r\n   */\r\n  static find(\r\n    fieldName = '',\r\n    condition = '',\r\n    fields = '*',\r\n    sortBy = {},\r\n    { page, itemsPerPage } = {}\r\n    ) {\r\n      return (new Query())\r\n        .select(fields)\r\n        .from(this.tableName)\r\n        .where(`${fieldName} ${condition}`)\r\n        .orderBy(sortBy)\r\n        .paginate(page, itemsPerPage)\r\n        .done()\r\n  }\r\n\r\n  /**\r\n   * @desc führe RAW SQL Query auf Modell aus\r\n   * @param {String} queryString\r\n   */\r\n  static query(queryString) {\r\n    return Query.q(queryString)\r\n  }\r\n\r\n  toString() {\r\n    return JSON.stringify(this)\r\n  }\r\n}\r\n\r\n// module.exports = DBModel\r\n"
+  },
+  {
+    "__docId__": 79,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Query",
+    "memberof": "backend/models/DBModel.js",
+    "longname": "backend/models/DBModel.js~Query",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/models/DBModel.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 2,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 80,
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "DBModel",
+    "memberof": "backend/models/DBModel.js",
+    "longname": "backend/models/DBModel.js~DBModel",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/models/DBModel.js",
+    "importStyle": null,
+    "description": "DBModel Base Class",
+    "lineNumber": 7,
+    "interface": false
+  },
+  {
+    "__docId__": 81,
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "backend/models/DBModel.js~DBModel",
+    "longname": "backend/models/DBModel.js~DBModel#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 9,
+    "undocument": true,
+    "params": [
+      {
+        "name": "props",
+        "optional": true,
+        "types": [
+          "{}"
+        ],
+        "defaultRaw": {},
+        "defaultValue": "{}"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 82,
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "tableName",
+    "memberof": "backend/models/DBModel.js~DBModel",
+    "longname": "backend/models/DBModel.js~DBModel.tableName",
+    "access": null,
+    "description": "get table name, muss von kindern überschrieben werden",
+    "lineNumber": 18,
+    "unknown": [
+      {
+        "tagName": "@static",
+        "tagValue": ""
+      }
+    ],
+    "type": {
+      "types": [
+        "string"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 83,
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "idField",
+    "memberof": "backend/models/DBModel.js~DBModel",
+    "longname": "backend/models/DBModel.js~DBModel.idField",
+    "access": null,
+    "description": "get id field - muss überschrieben werden",
+    "lineNumber": 29,
+    "unknown": [
+      {
+        "tagName": "@static",
+        "tagValue": ""
+      }
+    ],
+    "type": {
+      "types": [
+        "string"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 84,
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "findOneById",
+    "memberof": "backend/models/DBModel.js~DBModel",
+    "longname": "backend/models/DBModel.js~DBModel.findOneById",
+    "access": null,
+    "description": "finde ein modell über die id",
+    "lineNumber": 37,
+    "params": [
+      {
+        "name": "id",
+        "optional": true,
+        "types": [
+          "number"
+        ],
+        "defaultRaw": 0,
+        "defaultValue": "0"
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 85,
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "getAll",
+    "memberof": "backend/models/DBModel.js~DBModel",
+    "longname": "backend/models/DBModel.js~DBModel.getAll",
+    "access": null,
+    "description": "finde alle instanzen eines modells",
+    "lineNumber": 46,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 86,
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "findOne",
+    "memberof": "backend/models/DBModel.js~DBModel",
+    "longname": "backend/models/DBModel.js~DBModel.findOne",
+    "access": null,
+    "description": "findet eine instanz mit verschiedenen bedingungen",
+    "lineNumber": 58,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "fieldName",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "condition",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String",
+          "Array[String]"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "fields",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "sortBy",
+        "description": ""
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 87,
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "find",
+    "memberof": "backend/models/DBModel.js~DBModel",
+    "longname": "backend/models/DBModel.js~DBModel.find",
+    "access": null,
+    "description": "finde mehrere instanzen mit den bedingungen",
+    "lineNumber": 86,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "fieldName",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "condition",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String",
+          "Array[String]"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "fields",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "sortBy",
+        "description": ""
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 88,
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "query",
+    "memberof": "backend/models/DBModel.js~DBModel",
+    "longname": "backend/models/DBModel.js~DBModel.query",
+    "access": null,
+    "description": "führe RAW SQL Query auf Modell aus",
+    "lineNumber": 106,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "queryString",
+        "description": ""
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 89,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "toString",
+    "memberof": "backend/models/DBModel.js~DBModel",
+    "longname": "backend/models/DBModel.js~DBModel#toString",
+    "access": null,
+    "description": null,
+    "lineNumber": 110,
+    "undocument": true,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 90,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/models/Ergebnis.js",
+    "memberof": null,
+    "longname": "backend/models/Ergebnis.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "'use strict'\r\nconst DBModel = require('./DBModel')\r\nconst Hund = require('./Hund')\r\nconst Rennen = require('./Rennen')\r\n\r\n/**\r\n *\r\n * @desc Ergebnis Modell\r\n *\r\n *\r\n */\r\nclass Ergebnis extends DBModel {\r\n\r\n  constructor({\r\n    eid = '',\r\n    distanz = 0,\r\n    rang = 0,\r\n    hund = null,\r\n    rennen = null,\r\n    punkte = 0,\r\n    laeufe = 0\r\n  } = {}) {\r\n    super({ eid, distanz, rang, hund, rennen, punkte, laeufe })\r\n  }\r\n\r\n  /**\r\n   * @desc einen hund zu einem ergebnis finden\r\n   */\r\n  getHund() {\r\n    return Hund.findOneById(this.hund)\r\n  }\r\n\r\n  /**\r\n   * @desc finde das rennen  zum ergebnis\r\n   */\r\n  getRennen() {\r\n    return Rennen.findOneById(this.rennen)\r\n  }\r\n\r\n  static get tableName() {\r\n    return 'ergebnisse'\r\n  }\r\n\r\n  static get idField() {\r\n    return 'eid'\r\n  }\r\n\r\n  static get fields() {\r\n    return [\r\n      'eid',\r\n      'distanz',\r\n      'rang',\r\n      'hund',\r\n      'rennen',\r\n      'punkte',\r\n      'laeufe'\r\n    ]\r\n  }\r\n}\r\n\r\n// module.exports = Ergebnis\r\n"
+  },
+  {
+    "__docId__": 91,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "DBModel",
+    "memberof": "backend/models/Ergebnis.js",
+    "longname": "backend/models/Ergebnis.js~DBModel",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/models/Ergebnis.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 2,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 92,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Hund",
+    "memberof": "backend/models/Ergebnis.js",
+    "longname": "backend/models/Ergebnis.js~Hund",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/models/Ergebnis.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 93,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Rennen",
+    "memberof": "backend/models/Ergebnis.js",
+    "longname": "backend/models/Ergebnis.js~Rennen",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/models/Ergebnis.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 4,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 94,
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "Ergebnis",
+    "memberof": "backend/models/Ergebnis.js",
+    "longname": "backend/models/Ergebnis.js~Ergebnis",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/models/Ergebnis.js",
+    "importStyle": null,
+    "description": "Ergebnis Modell",
+    "lineNumber": 12,
+    "interface": false,
+    "extends": [
+      "DBModel"
+    ]
+  },
+  {
+    "__docId__": 95,
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "backend/models/Ergebnis.js~Ergebnis",
+    "longname": "backend/models/Ergebnis.js~Ergebnis#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 14,
+    "undocument": true,
+    "params": [
+      {
+        "name": "objectPattern",
+        "optional": true,
+        "types": [
+          "{\"eid\": *, \"distanz\": *, \"rang\": *, \"hund\": *, \"rennen\": *, \"punkte\": *, \"laeufe\": *}"
+        ],
+        "defaultRaw": {},
+        "defaultValue": "{}"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 96,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getHund",
+    "memberof": "backend/models/Ergebnis.js~Ergebnis",
+    "longname": "backend/models/Ergebnis.js~Ergebnis#getHund",
+    "access": null,
+    "description": "einen hund zu einem ergebnis finden",
+    "lineNumber": 29,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 97,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getRennen",
+    "memberof": "backend/models/Ergebnis.js~Ergebnis",
+    "longname": "backend/models/Ergebnis.js~Ergebnis#getRennen",
+    "access": null,
+    "description": "finde das rennen  zum ergebnis",
+    "lineNumber": 36,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 98,
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "tableName",
+    "memberof": "backend/models/Ergebnis.js~Ergebnis",
+    "longname": "backend/models/Ergebnis.js~Ergebnis.tableName",
+    "access": null,
+    "description": null,
+    "lineNumber": 40,
+    "undocument": true,
+    "type": {
+      "types": [
+        "string"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 99,
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "idField",
+    "memberof": "backend/models/Ergebnis.js~Ergebnis",
+    "longname": "backend/models/Ergebnis.js~Ergebnis.idField",
+    "access": null,
+    "description": null,
+    "lineNumber": 44,
+    "undocument": true,
+    "type": {
+      "types": [
+        "string"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 100,
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "fields",
+    "memberof": "backend/models/Ergebnis.js~Ergebnis",
+    "longname": "backend/models/Ergebnis.js~Ergebnis.fields",
+    "access": null,
+    "description": null,
+    "lineNumber": 48,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 101,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/models/Hund.js",
+    "memberof": null,
+    "longname": "backend/models/Hund.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "'use strict'\r\nconst DBModel = require('./DBModel')\r\nconst Ergebnis = require('./Ergebnis')\r\nconst Zwinger = require('./Zwinger')\r\n\r\n/**\r\n * @desc Hundemodell\r\n */\r\nexport default class Hund extends DBModel {\r\n\r\n  constructor({\r\n    hid = '',\r\n    name = '',\r\n    geschlecht = 'm',\r\n    geburtsjahr = 1970,\r\n    geburtsland = 'UNKNOWN',\r\n    aufenthaltsland = 'UNKNOWN',\r\n    vater = null,\r\n    mutter = null,\r\n    zwinger = null,\r\n    ergebnisse = [],\r\n    rennen = []\r\n  } = {}) {\r\n    super({ hid, name, geschlecht, geburtsjahr, geburtsland, aufenthaltsland, vater, mutter, zwinger, ergebnisse, rennen })\r\n  }\r\n\r\n  /**\r\n   * @desc rufe mutter eines hundes ab\r\n   */\r\n  getMutter() {\r\n    if (this.mutter) {\r\n      return Hund.findOneById(this.mutter)\r\n    }\r\n    return Promise.resolve(null)\r\n  }\r\n\r\n  /**\r\n   * @desc rufe vater eines hundes ab\r\n   */\r\n  getVater() {\r\n    if (this.vater) {\r\n      return Hund.findOneById(this.vater)\r\n    }\r\n    return Promise.resolve(null)\r\n  }\r\n\r\n  /**\r\n   * @desc rufe ergebnisse eines hundes ab\r\n   */\r\n  getErgebnisse() {\r\n    if (this.ergebnisse.length === 0) {\r\n      const fieldName = 'ergebnisse.hund'\r\n      const condition = `= ${this.hid}`\r\n      return Ergebnis.find(fieldName, condition)\r\n    } else return Promise.resolve(this.ergebnisse) // Cached\r\n  }\r\n\r\n  /**\r\n   * @desc rufe rennen eines hundes ab\r\n   */\r\n  getRennen() {\r\n    return this\r\n      .getErgebnisse()\r\n      .then((ergebnisse) => Promise.all(ergebnisse.map(erg => (new Ergebnis(erg)).getRennen())))\r\n  }\r\n\r\n  /**\r\n   * @desc rufe zwinger eines hundes ab\r\n   */\r\n  getZwinger() {\r\n    if (this.zwinger) {\r\n      return Zwinger.findOneById(this.zwinger)\r\n    }\r\n    return Promise.resolve(null)\r\n  }\r\n\r\n  /**\r\n   * @desc Finde einen Hund mit all seinen beziehungen\r\n   * @param {String} id\r\n   */\r\n  static findOneWithRelations(id) {\r\n    return Hund\r\n      .findOneById(id)\r\n      .then((dog) => {\r\n        if (dog) {\r\n          const DogInstance = new Hund(dog)\r\n          return DogInstance\r\n            .getMutter()\r\n            .then((mutter) => {\r\n              DogInstance.mutter = mutter || null\r\n\r\n              return DogInstance.getVater()\r\n            })\r\n            .then((vater = null) => {\r\n              DogInstance.vater = vater || null\r\n\r\n              return DogInstance.getErgebnisse()\r\n            })\r\n            .then((ergebnisse) => {\r\n              DogInstance.ergebnisse = ergebnisse\r\n\r\n              return DogInstance.getRennen()\r\n            })\r\n            .then((rennen) => {\r\n              DogInstance.rennen = rennen\r\n\r\n              return DogInstance\r\n            })\r\n          } else return null\r\n        })\r\n  }\r\n\r\n  /**\r\n   * @desc get random dogs\r\n   * @param {Number} amount\r\n   * @param {Number} maxAge\r\n   */\r\n  static getRandom(amount, maxAge) {\r\n    return Hund.query(`\r\n        SELECT * FROM ${this.tableName}\r\n        WHERE geburtsjahr >= ${maxAge} AND (SELECT COUNT(*) FROM ergebnisse WHERE ergebnisse.hund = hid) > 4\r\n        ORDER BY RANDOM()\r\n        LIMIT ${amount};`)\r\n      .then((dogs) => {\r\n        const DogInstances = dogs.map(d => new Hund(d))\r\n\r\n        return Promise.all(DogInstances.map(d => d.getMutter()))\r\n          .then((mothers) => {\r\n            mothers.filter(m => m).forEach((mother) => {\r\n              const Child = DogInstances.find(d => d.mutter == mother.hid)\r\n              Child.mutter = mother\r\n            })\r\n            return Promise.all(DogInstances.map(d => d.getVater()))\r\n          })\r\n          .then((fathers) => {\r\n            fathers.filter(f => f).forEach((father) => {\r\n              const Child = DogInstances.find(d => d.vater == father.hid)\r\n              Child.vater = father\r\n            })\r\n\r\n            return Promise.all(DogInstances.map(d => d.getZwinger()))\r\n          })\r\n          .then((zwingers) => {\r\n            zwingers.filter(f => f).forEach((zwi) => {\r\n              const Child = DogInstances.find(d => d.zwinger == zwi.zid)\r\n              Child.zwinger = zwi\r\n            })\r\n\r\n            return Promise.all(DogInstances.map(d => d.getErgebnisse()))\r\n          })\r\n          .then((ergebnisse) => {\r\n            ergebnisse.forEach((ergebnis) => {\r\n              const Child = DogInstances.find(d => d.hid == ergebnis[0].hund)\r\n              Child.ergebnisse = ergebnis\r\n            })\r\n\r\n            return Promise.all(DogInstances.map(d => d.getRennen()))\r\n          })\r\n          .then((rennen) => {\r\n            rennen.forEach((run) => {\r\n              const Child = DogInstances.find(d => d.ergebnisse.find(e => e.rennen == run[0].rid))\r\n              Child.rennen = run\r\n            })\r\n\r\n            return DogInstances\r\n          })\r\n\r\n      })\r\n  }\r\n\r\n  static get tableName() {\r\n    return 'hunde'\r\n  }\r\n\r\n  static get idField() {\r\n    return 'hid'\r\n  }\r\n\r\n  static get fields () {\r\n    return [\r\n      'hid',\r\n      'name',\r\n      'geschlecht',\r\n      'geburtsjahr',\r\n      'geburtsland',\r\n      'aufenthaltsland',\r\n      'vater',\r\n      'mutter',\r\n      'zwinger'\r\n    ]\r\n  }\r\n}\r\n\r\nmodule.exports = Hund\r\n"
+  },
+  {
+    "__docId__": 102,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "DBModel",
+    "memberof": "backend/models/Hund.js",
+    "longname": "backend/models/Hund.js~DBModel",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/models/Hund.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 2,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 103,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Ergebnis",
+    "memberof": "backend/models/Hund.js",
+    "longname": "backend/models/Hund.js~Ergebnis",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/models/Hund.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 104,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Zwinger",
+    "memberof": "backend/models/Hund.js",
+    "longname": "backend/models/Hund.js~Zwinger",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/models/Hund.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 4,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 105,
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "Hund",
+    "memberof": "backend/models/Hund.js",
+    "longname": "backend/models/Hund.js~Hund",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/models/Hund.js",
+    "importStyle": "Hund",
+    "description": "Hundemodell",
+    "lineNumber": 9,
+    "interface": false,
+    "extends": [
+      "DBModel"
+    ]
+  },
+  {
+    "__docId__": 106,
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "backend/models/Hund.js~Hund",
+    "longname": "backend/models/Hund.js~Hund#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 11,
+    "undocument": true,
+    "params": [
+      {
+        "name": "objectPattern",
+        "optional": true,
+        "types": [
+          "{\"hid\": *, \"name\": *, \"geschlecht\": *, \"geburtsjahr\": *, \"geburtsland\": *, \"aufenthaltsland\": *, \"vater\": *, \"mutter\": *, \"zwinger\": *, \"ergebnisse\": *, \"rennen\": *}"
+        ],
+        "defaultRaw": {},
+        "defaultValue": "{}"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 107,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getMutter",
+    "memberof": "backend/models/Hund.js~Hund",
+    "longname": "backend/models/Hund.js~Hund#getMutter",
+    "access": null,
+    "description": "rufe mutter eines hundes ab",
+    "lineNumber": 30,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 108,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getVater",
+    "memberof": "backend/models/Hund.js~Hund",
+    "longname": "backend/models/Hund.js~Hund#getVater",
+    "access": null,
+    "description": "rufe vater eines hundes ab",
+    "lineNumber": 40,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 109,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getErgebnisse",
+    "memberof": "backend/models/Hund.js~Hund",
+    "longname": "backend/models/Hund.js~Hund#getErgebnisse",
+    "access": null,
+    "description": "rufe ergebnisse eines hundes ab",
+    "lineNumber": 50,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 110,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getRennen",
+    "memberof": "backend/models/Hund.js~Hund",
+    "longname": "backend/models/Hund.js~Hund#getRennen",
+    "access": null,
+    "description": "rufe rennen eines hundes ab",
+    "lineNumber": 61,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 111,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getZwinger",
+    "memberof": "backend/models/Hund.js~Hund",
+    "longname": "backend/models/Hund.js~Hund#getZwinger",
+    "access": null,
+    "description": "rufe zwinger eines hundes ab",
+    "lineNumber": 70,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 112,
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "findOneWithRelations",
+    "memberof": "backend/models/Hund.js~Hund",
+    "longname": "backend/models/Hund.js~Hund.findOneWithRelations",
+    "access": null,
+    "description": "Finde einen Hund mit all seinen beziehungen",
+    "lineNumber": 81,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "id",
+        "description": ""
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 113,
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "getRandom",
+    "memberof": "backend/models/Hund.js~Hund",
+    "longname": "backend/models/Hund.js~Hund.getRandom",
+    "access": null,
+    "description": "get random dogs",
+    "lineNumber": 118,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Number"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "amount",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Number"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "maxAge",
+        "description": ""
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 114,
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "tableName",
+    "memberof": "backend/models/Hund.js~Hund",
+    "longname": "backend/models/Hund.js~Hund.tableName",
+    "access": null,
+    "description": null,
+    "lineNumber": 171,
+    "undocument": true,
+    "type": {
+      "types": [
+        "string"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 115,
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "idField",
+    "memberof": "backend/models/Hund.js~Hund",
+    "longname": "backend/models/Hund.js~Hund.idField",
+    "access": null,
+    "description": null,
+    "lineNumber": 175,
+    "undocument": true,
+    "type": {
+      "types": [
+        "string"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 116,
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "fields",
+    "memberof": "backend/models/Hund.js~Hund",
+    "longname": "backend/models/Hund.js~Hund.fields",
+    "access": null,
+    "description": null,
+    "lineNumber": 179,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 117,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/models/importdata.js",
+    "memberof": null,
+    "longname": "backend/models/importdata.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "/********************************************\r\n *  Import Klasse, initialisierte\r\n *  Objekte stellen jeweils eine Zeile in der\r\n *  CSV Datei dar.\r\n ********************************************\r\n *\r\n * @name ImportData\r\n *\r\n ********************************************/\r\nexport default class ImportData {\r\n  constructor(id, [\r\n    raceCountry,\r\n    year,\r\n    place,\r\n    displayName,\r\n    gender,\r\n    vater,\r\n    mutter,\r\n    runCount,\r\n    punkte,\r\n    distanz\r\n  ] = []) {\r\n    const fullName        = displayName.split('[')[0].trim()\r\n    const BornLivesAge    = displayName.split('[')[1].replace(']', '')\r\n    const knownAufenthalt = BornLivesAge.indexOf('/') !== -1\r\n    const birthYear       = parseInt(BornLivesAge.split(' ')[1], 10)\r\n    const geburtsland     = knownAufenthalt ? BornLivesAge.split('/')[0] : BornLivesAge.split(' ')[0]\r\n    const aufenthaltsland = knownAufenthalt ? (BornLivesAge.split('/')[1] || '').split(' ')[0] : null\r\n\r\n    const { zwinger, name } = ImportData.getName(fullName)\r\n\r\n    this.id               = id\r\n    this.raceCountry      = raceCountry\r\n    this.year             = birthYear\r\n    this.rang             = parseInt(place, 10)\r\n    this.displayName      = displayName\r\n    this.geschlecht       = gender ? (gender.toLowerCase() === 'm' ? 'm' : 'f') : 'm'\r\n    this.vater            = vater\r\n    this.mutter           = mutter\r\n    this.runCount         = parseInt(runCount, 10)\r\n    this.sumPoints        = parseInt(Math.round(punkte), 10)\r\n    this.avgDistance      = distanz ? parseInt(distanz.replace('\\r', ''), 10) : 0\r\n    this.geburtsland      = geburtsland\r\n    this.aufenthaltsland  = aufenthaltsland\r\n    this.zwinger          = zwinger\r\n    this.name             = name\r\n    this.raceYear         = year\r\n    this.raceYearCountry  = `${year}${raceCountry}`\r\n\r\n    this.zwingerID        = null\r\n    this.vaterID          = null\r\n    this.mutterID         = null\r\n    this.wurf             = null\r\n  }\r\n\r\n  transformToSQLInsert() {\r\n    return [\r\n      this.id,\r\n      this.name,\r\n      this.geschlecht,\r\n      this.year,\r\n      this.geburtsland,\r\n      this.aufenthaltsland\r\n    ]\r\n  }\r\n\r\n  static getName(fullName) {\r\n    const words = fullName.split(' ') // trennt die einzelnen Bereiche der Spalte\r\n    // ist in einem der Namen ein Apostroph, gehen wir davon aus, dass das der Zwingername ist\r\n    // und dass der ZwingerName vor dem Hundenamen steht\r\n    const hasZwingerFirst = words.find(word => word.indexOf(`'s`) !== -1) || false\r\n\r\n    // 2 Wörter im Namen und der Zwingername ist *nicht* als erstes\r\n    // Schema: [DogName] [ZwingerName]\r\n    if (words.length === 2 && !hasZwingerFirst) {\r\n      const zwinger = [...words] // copy words\r\n      const name    = zwinger.shift()\r\n\r\n      return {\r\n        zwinger: zwinger.join(' '),\r\n        name: name.trim(),\r\n      }\r\n    }\r\n\r\n    // 2 oder mehr Wörter und Zwingername zuerst\r\n    // Schema: [ZwingerName]'s [DogName]\r\n    if (words.length >= 2 && hasZwingerFirst) {\r\n      const name    = [...words]\r\n      const zwinger = name.shift()\r\n\r\n      return {\r\n        zwinger,\r\n        name: name.join(' ').trim()\r\n      }\r\n    }\r\n\r\n    // kein Zwinger vorhanden, Zwinger (NULL)\r\n\r\n    return {\r\n      name: words.join(' ').trim(),\r\n      zwinger: null\r\n    }\r\n  }\r\n}\r\n\r\nmodule.exports = ImportData\r\n\r\nclass ImportZwinger {\r\n  constructor({ id, name }) {\r\n    this.id = id\r\n    this.name = name\r\n  }\r\n}\r\n\r\n// module.exports.ImportZwinger = ImportZwinger\r\n"
+  },
+  {
+    "__docId__": 118,
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "ImportData",
+    "memberof": "backend/models/importdata.js",
+    "longname": "backend/models/importdata.js~ImportData",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/models/importdata.js",
+    "importStyle": "ImportData",
+    "description": "*****************************************\n Import Klasse, initialisierte\n Objekte stellen jeweils eine Zeile in der\n CSV Datei dar.\n*******************************************",
+    "lineNumber": 10,
+    "unknown": [
+      {
+        "tagName": "@name",
+        "tagValue": "ImportData\n\n******************************************"
+      }
+    ],
+    "interface": false
+  },
+  {
+    "__docId__": 119,
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 11,
+    "undocument": true,
+    "params": [
+      {
+        "name": "id",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "optional": true,
+        "types": [
+          "*[]"
+        ],
+        "defaultRaw": [],
+        "defaultValue": "[]"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 120,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "id",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#id",
+    "access": null,
+    "description": null,
+    "lineNumber": 32,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 121,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "raceCountry",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#raceCountry",
+    "access": null,
+    "description": null,
+    "lineNumber": 33,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 122,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "year",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#year",
+    "access": null,
+    "description": null,
+    "lineNumber": 34,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 123,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "rang",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#rang",
+    "access": null,
+    "description": null,
+    "lineNumber": 35,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 124,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "displayName",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#displayName",
+    "access": null,
+    "description": null,
+    "lineNumber": 36,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 125,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "geschlecht",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#geschlecht",
+    "access": null,
+    "description": null,
+    "lineNumber": 37,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 126,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "vater",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#vater",
+    "access": null,
+    "description": null,
+    "lineNumber": 38,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 127,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "mutter",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#mutter",
+    "access": null,
+    "description": null,
+    "lineNumber": 39,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 128,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "runCount",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#runCount",
+    "access": null,
+    "description": null,
+    "lineNumber": 40,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 129,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "sumPoints",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#sumPoints",
+    "access": null,
+    "description": null,
+    "lineNumber": 41,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 130,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "avgDistance",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#avgDistance",
+    "access": null,
+    "description": null,
+    "lineNumber": 42,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 131,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "geburtsland",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#geburtsland",
+    "access": null,
+    "description": null,
+    "lineNumber": 43,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 132,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "aufenthaltsland",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#aufenthaltsland",
+    "access": null,
+    "description": null,
+    "lineNumber": 44,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 133,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "zwinger",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#zwinger",
+    "access": null,
+    "description": null,
+    "lineNumber": 45,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 134,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "name",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#name",
+    "access": null,
+    "description": null,
+    "lineNumber": 46,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 135,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "raceYear",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#raceYear",
+    "access": null,
+    "description": null,
+    "lineNumber": 47,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 136,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "raceYearCountry",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#raceYearCountry",
+    "access": null,
+    "description": null,
+    "lineNumber": 48,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 137,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "zwingerID",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#zwingerID",
+    "access": null,
+    "description": null,
+    "lineNumber": 50,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 138,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "vaterID",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#vaterID",
+    "access": null,
+    "description": null,
+    "lineNumber": 51,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 139,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "mutterID",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#mutterID",
+    "access": null,
+    "description": null,
+    "lineNumber": 52,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 140,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "wurf",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#wurf",
+    "access": null,
+    "description": null,
+    "lineNumber": 53,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 141,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "transformToSQLInsert",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData#transformToSQLInsert",
+    "access": null,
+    "description": null,
+    "lineNumber": 56,
+    "undocument": true,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 142,
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "getName",
+    "memberof": "backend/models/importdata.js~ImportData",
+    "longname": "backend/models/importdata.js~ImportData.getName",
+    "access": null,
+    "description": null,
+    "lineNumber": 67,
+    "undocument": true,
+    "params": [
+      {
+        "name": "fullName",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 143,
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "ImportZwinger",
+    "memberof": "backend/models/importdata.js",
+    "longname": "backend/models/importdata.js~ImportZwinger",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/models/importdata.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 108,
+    "undocument": true,
+    "interface": false
+  },
+  {
+    "__docId__": 144,
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "backend/models/importdata.js~ImportZwinger",
+    "longname": "backend/models/importdata.js~ImportZwinger#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 109,
+    "undocument": true,
+    "params": [
+      {
+        "name": "objectPattern",
+        "types": [
+          "{\"id\": *, \"name\": *}"
+        ],
+        "defaultRaw": {
+          "id": null,
+          "name": null
+        },
+        "defaultValue": "{\"id\":null,\"name\":null}"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 145,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "id",
+    "memberof": "backend/models/importdata.js~ImportZwinger",
+    "longname": "backend/models/importdata.js~ImportZwinger#id",
+    "access": null,
+    "description": null,
+    "lineNumber": 110,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 146,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "name",
+    "memberof": "backend/models/importdata.js~ImportZwinger",
+    "longname": "backend/models/importdata.js~ImportZwinger#name",
+    "access": null,
+    "description": null,
+    "lineNumber": 111,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 147,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/models/Query.js",
+    "memberof": null,
+    "longname": "backend/models/Query.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "'use strict'\r\nconst DB = require('../lib/database')\r\n\r\nexport default class Query {\r\n\r\n  constructor(props) {\r\n    this.QUERY = ''\r\n\r\n    this.paginateActive = false\r\n    this.page = 0\r\n    this.itemsPerPage = 50\r\n  }\r\n\r\n  /**\r\n   *\r\n   * Verwandelt JSON Condition Objekt in\r\n   * SQL Select statements\r\n   * @name select\r\n   * @version 0.0.1\r\n   * @example (new Query()).select('col1 col2 col3') oder (new Query()).select(['col1', 'col2'])\r\n   * @param {[string]|string} select - Select condition(s)\r\n   */\r\n  select(columns = ['*']) {\r\n    // columns -> Array wenn nur String übergeben\r\n    const _cols = Array.isArray(columns) ? columns : columns.split(' ')\r\n\r\n    this.QUERY += `SELECT ${_cols.join(',') } `\r\n\r\n    return this\r\n  }\r\n\r\n  /**\r\n   *\r\n   * @name from\r\n   * @version 0.0.1\r\n   * @param {String} table\r\n   * @example (new Query()).select().from('table')\r\n   */\r\n  from(table = '') {\r\n    if (table.length > 0) {\r\n      this.QUERY += `FROM ${table} `\r\n    }\r\n\r\n    return this\r\n  }\r\n\r\n  /**\r\n   *\r\n   * @name where\r\n   * @version 0.0.1\r\n   * @param {String} condition\r\n   * @example (new Query()).select().from('table').where('x NOT NULL')\r\n   */\r\n  where(condition = '') {\r\n    if (condition.length > 1) {\r\n      this.QUERY += `WHERE ${condition} `\r\n    }\r\n\r\n    return this\r\n  }\r\n\r\n  /**\r\n   * @param {Number} size\r\n   * @return {Query} this\r\n   */\r\n  offset(size = 0) {\r\n    this.QUERY += `OFFSET ${size} `\r\n\r\n    return this\r\n  }\r\n\r\n  /**\r\n   * @desc order by query\r\n   * @param {Object} fieldObject\r\n   */\r\n  orderBy(fieldObject = {}) {\r\n    const fields = Object.keys(fieldObject)\r\n    if (fields.length > 0) {\r\n      const qry = fields.map((fieldName) => {\r\n        const direction = fieldObject[fieldName]\r\n\r\n        return `${fieldName} ${direction} `\r\n      }).join(', ')\r\n      this.QUERY += `ORDER BY ${qry}`\r\n    }\r\n\r\n    return this\r\n  }\r\n\r\n  /**\r\n   * @desc limit query\r\n   * @param {Number} limit\r\n   */\r\n  limit(size = 50) {\r\n    this.QUERY += `LIMIT ${size}`\r\n\r\n    return this\r\n  }\r\n\r\n  /**\r\n   * @desc paginate query\r\n   * @param {Number} page\r\n   * @param {Number} itemsPerpage\r\n   */\r\n  paginate(page, itemsPerpage) {\r\n    if (typeof page !== 'undefined' && itemsPerpage) {\r\n      this.offset(page * itemsPerpage)\r\n      this.limit(itemsPerpage)\r\n    }\r\n\r\n    return this\r\n  }\r\n\r\n  /**\r\n   * @desc print sql query\r\n   */\r\n  print() {\r\n    console.log(`DBQuery :: \"${this.QUERY}\"`)\r\n    return this\r\n  }\r\n\r\n  /**\r\n  * @desc raw query\r\n  * @param {String} queryString\r\n  */\r\n  query(queryString) {\r\n    this.QUERY += queryString\r\n\r\n    return this\r\n  }\r\n\r\n  /**\r\n   * @param {String} query\r\n   */\r\n  done(query = this.QUERY) {\r\n    const qry = query + ';'\r\n\r\n    this.print()\r\n\r\n    return new Promise((resolve, reject) => {\r\n      DB.query(qry, (err, rows) => {\r\n        if (err) {\r\n          reject(err)\r\n        } else {\r\n          if (this.paginateActive) {\r\n            const result = { rows: rows.rows, paginated: true, page: this.page, itemsPerpage: this.itemsPerPage }\r\n            resolve(result)\r\n          }\r\n          resolve(rows.rows)\r\n        }\r\n      })\r\n    })\r\n  }\r\n\r\n  /**\r\n   * @desc run and execute raw query\r\n   * @param {String} queryString\r\n   */\r\n  static q(queryString) {\r\n    return (new Query()).query(queryString).done()\r\n  }\r\n}\r\n\r\n// module.exports = Query\r\n"
+  },
+  {
+    "__docId__": 148,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "DB",
+    "memberof": "backend/models/Query.js",
+    "longname": "backend/models/Query.js~DB",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/models/Query.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 2,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 149,
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "Query",
+    "memberof": "backend/models/Query.js",
+    "longname": "backend/models/Query.js~Query",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/models/Query.js",
+    "importStyle": "Query",
+    "description": null,
+    "lineNumber": 4,
+    "undocument": true,
+    "interface": false
+  },
+  {
+    "__docId__": 150,
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 6,
+    "undocument": true,
+    "params": [
+      {
+        "name": "props",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 151,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "QUERY",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#QUERY",
+    "access": null,
+    "description": null,
+    "lineNumber": 7,
+    "undocument": true,
+    "type": {
+      "types": [
+        "string"
+      ]
+    }
+  },
+  {
+    "__docId__": 152,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "paginateActive",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#paginateActive",
+    "access": null,
+    "description": null,
+    "lineNumber": 9,
+    "undocument": true,
+    "type": {
+      "types": [
+        "boolean"
+      ]
+    }
+  },
+  {
+    "__docId__": 153,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "page",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#page",
+    "access": null,
+    "description": null,
+    "lineNumber": 10,
+    "undocument": true,
+    "type": {
+      "types": [
+        "number"
+      ]
+    }
+  },
+  {
+    "__docId__": 154,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "itemsPerPage",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#itemsPerPage",
+    "access": null,
+    "description": null,
+    "lineNumber": 11,
+    "undocument": true,
+    "type": {
+      "types": [
+        "number"
+      ]
+    }
+  },
+  {
+    "__docId__": 155,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "select",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#select",
+    "access": null,
+    "description": "\nVerwandelt JSON Condition Objekt in\nSQL Select statements",
+    "examples": [
+      "(new Query()).select('col1 col2 col3') oder (new Query()).select(['col1', 'col2'])"
+    ],
+    "lineNumber": 23,
+    "version": "0.0.1",
+    "unknown": [
+      {
+        "tagName": "@name",
+        "tagValue": "select"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "[string]",
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "select",
+        "description": "Select condition(s)"
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 156,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "QUERY",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#QUERY",
+    "access": null,
+    "description": null,
+    "lineNumber": 27,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 157,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "from",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#from",
+    "access": null,
+    "description": "",
+    "examples": [
+      "(new Query()).select().from('table')"
+    ],
+    "lineNumber": 39,
+    "version": "0.0.1",
+    "unknown": [
+      {
+        "tagName": "@name",
+        "tagValue": "from"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "table",
+        "description": ""
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 158,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "QUERY",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#QUERY",
+    "access": null,
+    "description": null,
+    "lineNumber": 41,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 159,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "where",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#where",
+    "access": null,
+    "description": "",
+    "examples": [
+      "(new Query()).select().from('table').where('x NOT NULL')"
+    ],
+    "lineNumber": 54,
+    "version": "0.0.1",
+    "unknown": [
+      {
+        "tagName": "@name",
+        "tagValue": "where"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "condition",
+        "description": ""
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 160,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "QUERY",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#QUERY",
+    "access": null,
+    "description": null,
+    "lineNumber": 56,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 161,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "offset",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#offset",
+    "access": null,
+    "description": "",
+    "lineNumber": 66,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Number"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "size",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Query"
+      ],
+      "spread": false,
+      "description": "this"
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 162,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "QUERY",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#QUERY",
+    "access": null,
+    "description": null,
+    "lineNumber": 67,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 163,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "orderBy",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#orderBy",
+    "access": null,
+    "description": "order by query",
+    "lineNumber": 76,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "fieldObject",
+        "description": ""
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 164,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "QUERY",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#QUERY",
+    "access": null,
+    "description": null,
+    "lineNumber": 84,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 165,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "limit",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#limit",
+    "access": null,
+    "description": "limit query",
+    "lineNumber": 94,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Number"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "limit",
+        "description": ""
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 166,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "QUERY",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#QUERY",
+    "access": null,
+    "description": null,
+    "lineNumber": 95,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 167,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "paginate",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#paginate",
+    "access": null,
+    "description": "paginate query",
+    "lineNumber": 105,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Number"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "page",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Number"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "itemsPerpage",
+        "description": ""
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 168,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "print",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#print",
+    "access": null,
+    "description": "print sql query",
+    "lineNumber": 117,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 169,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "query",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#query",
+    "access": null,
+    "description": "raw query",
+    "lineNumber": 126,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "queryString",
+        "description": ""
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 170,
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "QUERY",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#QUERY",
+    "access": null,
+    "description": null,
+    "lineNumber": 127,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 171,
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "done",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query#done",
+    "access": null,
+    "description": "",
+    "lineNumber": 135,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "query",
+        "description": ""
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 172,
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "q",
+    "memberof": "backend/models/Query.js~Query",
+    "longname": "backend/models/Query.js~Query.q",
+    "access": null,
+    "description": "run and execute raw query",
+    "lineNumber": 159,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "queryString",
+        "description": ""
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 173,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/models/Rennen.js",
+    "memberof": null,
+    "longname": "backend/models/Rennen.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "'use strict'\r\nconst DBModel = require('./DBModel')\r\n\r\n/**\r\n * @name Rennen\r\n */\r\nexport default class Rennen extends DBModel {\r\n\r\n  constructor({\r\n    rid = '',\r\n    jahr = 0,\r\n    ort = ''\r\n  } = {}) {\r\n    super({ rid, jahr, ort })\r\n  }\r\n\r\n  static get tableName() {\r\n    return 'rennen'\r\n  }\r\n\r\n  static get idField() {\r\n    return 'rid'\r\n  }\r\n\r\n  static get fields() {\r\n    return [\r\n      'rid',\r\n      'jahr',\r\n      'ort'\r\n    ]\r\n  }\r\n}\r\n\r\n// module.exports = Rennen\r\n"
+  },
+  {
+    "__docId__": 174,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "DBModel",
+    "memberof": "backend/models/Rennen.js",
+    "longname": "backend/models/Rennen.js~DBModel",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/models/Rennen.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 2,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 175,
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "Rennen",
+    "memberof": "backend/models/Rennen.js",
+    "longname": "backend/models/Rennen.js~Rennen",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/models/Rennen.js",
+    "importStyle": "Rennen",
+    "description": "",
+    "lineNumber": 7,
+    "unknown": [
+      {
+        "tagName": "@name",
+        "tagValue": "Rennen"
+      }
+    ],
+    "interface": false,
+    "extends": [
+      "DBModel"
+    ]
+  },
+  {
+    "__docId__": 176,
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "backend/models/Rennen.js~Rennen",
+    "longname": "backend/models/Rennen.js~Rennen#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 9,
+    "undocument": true,
+    "params": [
+      {
+        "name": "objectPattern",
+        "optional": true,
+        "types": [
+          "{\"rid\": *, \"jahr\": *, \"ort\": *}"
+        ],
+        "defaultRaw": {},
+        "defaultValue": "{}"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 177,
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "tableName",
+    "memberof": "backend/models/Rennen.js~Rennen",
+    "longname": "backend/models/Rennen.js~Rennen.tableName",
+    "access": null,
+    "description": null,
+    "lineNumber": 17,
+    "undocument": true,
+    "type": {
+      "types": [
+        "string"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 178,
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "idField",
+    "memberof": "backend/models/Rennen.js~Rennen",
+    "longname": "backend/models/Rennen.js~Rennen.idField",
+    "access": null,
+    "description": null,
+    "lineNumber": 21,
+    "undocument": true,
+    "type": {
+      "types": [
+        "string"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 179,
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "fields",
+    "memberof": "backend/models/Rennen.js~Rennen",
+    "longname": "backend/models/Rennen.js~Rennen.fields",
+    "access": null,
+    "description": null,
+    "lineNumber": 25,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 180,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/models/Zwinger.js",
+    "memberof": null,
+    "longname": "backend/models/Zwinger.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "'use strict'\r\nconst DBModel = require('./DBModel')\r\n\r\n/**\r\n * @desc Zwingermodell\r\n */\r\nexport default class Zwinger extends DBModel {\r\n\r\n  constructor({\r\n    zid = '',\r\n    name = 0\r\n  } = {}) {\r\n    super({ zid, name })\r\n  }\r\n\r\n  static get tableName() {\r\n    return 'zwinger'\r\n  }\r\n\r\n  static get idField() {\r\n    return 'zid'\r\n  }\r\n\r\n  static get fields() {\r\n    return [\r\n      'zid',\r\n      'name',\r\n    ]\r\n  }\r\n}\r\n\r\n// module.exports = Zwinger\r\n"
+  },
+  {
+    "__docId__": 181,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "DBModel",
+    "memberof": "backend/models/Zwinger.js",
+    "longname": "backend/models/Zwinger.js~DBModel",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/models/Zwinger.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 2,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 182,
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "Zwinger",
+    "memberof": "backend/models/Zwinger.js",
+    "longname": "backend/models/Zwinger.js~Zwinger",
+    "access": null,
+    "export": true,
+    "importPath": "dbs_sose_16/backend/models/Zwinger.js",
+    "importStyle": "Zwinger",
+    "description": "Zwingermodell",
+    "lineNumber": 7,
+    "interface": false,
+    "extends": [
+      "DBModel"
+    ]
+  },
+  {
+    "__docId__": 183,
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "backend/models/Zwinger.js~Zwinger",
+    "longname": "backend/models/Zwinger.js~Zwinger#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 9,
+    "undocument": true,
+    "params": [
+      {
+        "name": "objectPattern",
+        "optional": true,
+        "types": [
+          "{\"zid\": *, \"name\": *}"
+        ],
+        "defaultRaw": {},
+        "defaultValue": "{}"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 184,
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "tableName",
+    "memberof": "backend/models/Zwinger.js~Zwinger",
+    "longname": "backend/models/Zwinger.js~Zwinger.tableName",
+    "access": null,
+    "description": null,
+    "lineNumber": 16,
+    "undocument": true,
+    "type": {
+      "types": [
+        "string"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 185,
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "idField",
+    "memberof": "backend/models/Zwinger.js~Zwinger",
+    "longname": "backend/models/Zwinger.js~Zwinger.idField",
+    "access": null,
+    "description": null,
+    "lineNumber": 20,
+    "undocument": true,
+    "type": {
+      "types": [
+        "string"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 186,
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "fields",
+    "memberof": "backend/models/Zwinger.js~Zwinger",
+    "longname": "backend/models/Zwinger.js~Zwinger.fields",
+    "access": null,
+    "description": null,
+    "lineNumber": 24,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 187,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "backend/routes.js",
+    "memberof": null,
+    "longname": "backend/routes.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "const Joi = require('joi')\r\n\r\nconst HundeController = require('./controllers/HundeController')\r\nconst ZwingerController = require('./controllers/ZwingerController')\r\nconst moment = require('moment')\r\n\r\nexport default [\r\n  {\r\n    method: 'GET',\r\n    path: '/hund/random',\r\n    config: {\r\n      handler: HundeController.randomDogs,\r\n      validate: {\r\n        query: {\r\n          amount: Joi.number().integer().min(1).max(25).required(),\r\n          maxAge: Joi.number().integer().min(15).max(96).default(99999),\r\n        }\r\n      }\r\n    },\r\n  },\r\n  {\r\n    method: 'GET',\r\n    path: '/hund/{id}',\r\n    config: {\r\n      handler: HundeController.findOne,\r\n      validate: {\r\n        params: {\r\n          id: Joi.number().integer().default(1)\r\n        }\r\n      }\r\n    },\r\n  },\r\n  {\r\n    method: 'GET',\r\n    path: '/zwinger',\r\n    config: {\r\n      handler: ZwingerController.getTop,\r\n      validate: {\r\n        query: {\r\n          amount: Joi.number().integer().min(1).max(50).required()\r\n        }\r\n      }\r\n    }\r\n  },\r\n  {\r\n    method: 'GET',\r\n    path: '/hund/children',\r\n    config: {\r\n      handler: HundeController.children,\r\n      validate: {\r\n        query: {\r\n          page: Joi.number().integer().min(0).default(0),\r\n          direction: Joi.number().integer().min(-1).max(1).not(0).default(1),\r\n          gender: Joi.string().default('m'),\r\n          top: Joi.number().integer().min(1).max(50).default(25),\r\n          itemsPerPage: Joi.number().integer().min(1).max(50).default(25),\r\n        }\r\n      }\r\n    }\r\n  },\r\n  {\r\n    method: 'GET',\r\n    path: '/hund/races',\r\n    config: {\r\n      handler: HundeController.races,\r\n      validate: {\r\n        query: {\r\n          page: Joi.number().integer().min(0).default(0),\r\n          direction: Joi.number().integer().min(-1).max(1).not(0).default(1),\r\n          itemsPerPage: Joi.number().integer().min(1).max(50).default(25),\r\n        }\r\n      }\r\n    }\r\n  },\r\n  {\r\n    method: 'GET',\r\n    path: '/hund/average',\r\n    config: {\r\n      handler: HundeController.avg,\r\n      validate: {\r\n        query: {\r\n          page: Joi.number().integer().min(0).default(0),\r\n          direction: Joi.number().integer().min(-1).max(1).not(0).default(1),\r\n          top: Joi.number().integer().min(1).max(50).default(25),\r\n          itemsPerPage: Joi.number().integer().min(1).max(50).default(25),\r\n        }\r\n      }\r\n    }\r\n  },\r\n  {\r\n    method: 'GET',\r\n    path: '/hund',\r\n    config: {\r\n      handler: HundeController.all,\r\n      validate: {\r\n        query: {\r\n          sortBy: Joi.string().default('hid'),\r\n          direction: Joi.number().integer().min(-1).max(1).not(0).default(1),\r\n          page: Joi.number().integer().min(0).default(0),\r\n          itemsPerPage: Joi.number().integer().min(1).max(50).default(25),\r\n        }\r\n      }\r\n    }\r\n  },\r\n].map(route => {\r\n  const PREFIX = '/v0'\r\n  route.path = `${PREFIX}${route.path}`\r\n  return route\r\n})\r\n"
+  },
+  {
+    "__docId__": 188,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Joi",
+    "memberof": "backend/routes.js",
+    "longname": "backend/routes.js~Joi",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/routes.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 1,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 189,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "HundeController",
+    "memberof": "backend/routes.js",
+    "longname": "backend/routes.js~HundeController",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/routes.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 190,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "ZwingerController",
+    "memberof": "backend/routes.js",
+    "longname": "backend/routes.js~ZwingerController",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/routes.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 4,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 191,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "moment",
+    "memberof": "backend/routes.js",
+    "longname": "backend/routes.js~moment",
+    "access": null,
+    "export": false,
+    "importPath": "dbs_sose_16/backend/routes.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 5,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 193,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Infinity",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Infinity",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Infinity",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 194,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "NaN",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~NaN",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 195,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "undefined",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/undefined",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~undefined",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 196,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "null",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/null",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~null",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 197,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Object",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Object",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 198,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "object",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~object",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 199,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Function",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Function",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 200,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "function",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~function",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 201,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Boolean",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Boolean",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 202,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "boolean",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~boolean",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 203,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Symbol",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Symbol",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 204,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Error",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Error",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 205,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "EvalError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/EvalError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~EvalError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 206,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "InternalError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/InternalError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~InternalError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 207,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "RangeError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RangeError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~RangeError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 208,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "ReferenceError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ReferenceError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~ReferenceError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 209,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "SyntaxError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SyntaxError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~SyntaxError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 210,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "TypeError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypeError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~TypeError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 211,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "URIError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/URIError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~URIError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 212,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Number",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Number",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 213,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "number",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~number",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 214,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Date",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Date",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 215,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "String",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~String",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 216,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "string",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~string",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 217,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "RegExp",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~RegExp",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 218,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 219,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Int8Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int8Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int8Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 220,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint8Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint8Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 221,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint8ClampedArray",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8ClampedArray",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint8ClampedArray",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 222,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Int16Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int16Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int16Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 223,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint16Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint16Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint16Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 224,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Int32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int32Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 225,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint32Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 226,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Float32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Float32Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 227,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Float64Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float64Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Float64Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 228,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Map",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Map",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 229,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Set",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Set",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 230,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "WeakMap",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~WeakMap",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 231,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "WeakSet",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakSet",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~WeakSet",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 232,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "ArrayBuffer",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~ArrayBuffer",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 233,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "DataView",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~DataView",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 234,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "JSON",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~JSON",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 235,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Promise",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Promise",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 236,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Generator",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Generator",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 237,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "GeneratorFunction",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~GeneratorFunction",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 238,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Reflect",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Reflect",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Reflect",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 239,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Proxy",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Proxy",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 241,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "CanvasRenderingContext2D",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~CanvasRenderingContext2D",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 242,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "DocumentFragment",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~DocumentFragment",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 243,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Element",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Element",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~Element",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 244,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Event",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Event",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~Event",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 245,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Node",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Node",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~Node",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 246,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "NodeList",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/NodeList",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~NodeList",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 247,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "XMLHttpRequest",
+    "externalLink": "https://developer.mozilla.org/en/docs/Web/API/XMLHttpRequest",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~XMLHttpRequest",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 248,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "AudioContext",
+    "externalLink": "https://developer.mozilla.org/en/docs/Web/API/AudioContext",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~AudioContext",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  }
+]

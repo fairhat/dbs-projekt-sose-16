@@ -3,8 +3,21 @@ const Hund = require('../models/Hund')
 const Boom = require('Boom')
 const moment = require('moment')
 
+/**
+ * @name HundeController
+ * @desc Controller für HundeViews
+ * @class
+ **/
 class HundeController {
 
+  /**
+   *
+   * @name findOne
+   * @desc find one dog by id
+   * @version 0.0.1
+   * @param {Request} req
+   * @param {Response} res
+   */
   static findOne(req, res) {
     Hund.findOneWithRelations(req.params.id)
         .then((result) => {
@@ -17,6 +30,14 @@ class HundeController {
         .catch((e) => res(e))
   }
 
+  /**
+   *
+   * @name randomDogs
+   * @desc find random dogs
+   * @version 0.0.1
+   * @param {Request} req
+   * @param {Response} res
+   */
   static randomDogs(req, res) {
     const thisYear = parseInt(moment().format('YYYY'), 10)
     const maxAge = thisYear - parseInt(req.query.maxAge / 12, 10)
@@ -31,6 +52,14 @@ class HundeController {
         }).catch(res)
   }
 
+  /**
+   *
+   * @name all
+   * @desc get all dogs
+   * @version 0.0.1
+   * @param {Request} req
+   * @param {Response} res
+   */
   static all(req, res) {
     const direction = req.query.direction === 1 ? 'ASC' : 'DESC'
     const { page, itemsPerPage, sortBy } = req.query
@@ -39,6 +68,14 @@ class HundeController {
       .catch(res)
   }
 
+  /**
+   *
+   * @name avg
+   * @desc get dogs average points
+   * @version 0.0.1
+   * @param {Request} req
+   * @param {Response} res
+   */
   static avg(req, res) {
     const direction = req.query.direction === 1 ? 'ASC' : 'DESC'
     const { page, itemsPerPage } = req.query
@@ -59,6 +96,14 @@ class HundeController {
                 .catch(res)
   }
 
+  /**
+   *
+   * @name races
+   * @desc get dog races
+   * @version 0.0.1
+   * @param {Request} req
+   * @param {Response} res
+   */
   static races(req, res) {
     const direction = req.query.direction === 1 ? 'ASC' : 'DESC'
     const { page, itemsPerPage } = req.query
@@ -79,6 +124,14 @@ class HundeController {
                 .catch(console.error)
   }
 
+  /**
+   *
+   * @name children
+   * @desc get data to children of dogs
+   * @version 0.0.1
+   * @param {Request} req
+   * @param {Response} res
+   */
   static children(req, res) {
     const parent = req.query.gender === 'm' ? 'vater' : 'mutter'
     const { page, itemsPerPage } = req.query
